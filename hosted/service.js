@@ -2,7 +2,9 @@ import {store} from './store.js';
 import {createCampaign,updateCampaign,previewCampaign,runAgent,merchantSnapshot,reconcile} from '../outputs/committed-cart/merchant-engine.mjs';
 import {verify} from '../outputs/committed-cart/engine.mjs';
 import {merchantTools} from '../outputs/committed-cart/merchant-tools.mjs';
-export const hostedTools=merchantTools.map(t=>({...t,description:t.name==='merchant_run'?'Process active campaigns against confirmed Visa sandbox intents. Duplicates and pricing/stock limits are enforced.':t.description,...(t.name==='merchant_create_campaign'?{inputSchema:{...t.inputSchema,required:[...t.inputSchema.required,'requestId']}}:{})}));
+// Stateful Testnet deal tools run on the local protocol backend, not this hosted adapter.
+const hostedToolNames=new Set(['merchant_overview','merchant_intents','merchant_preview','merchant_create_campaign','merchant_update_campaign','merchant_run']);
+export const hostedTools=merchantTools.filter(t=>hostedToolNames.has(t.name)).map(t=>({...t,description:t.name==='merchant_run'?'Process active campaigns against confirmed Visa sandbox intents. Duplicates and pricing/stock limits are enforced.':t.description,...(t.name==='merchant_create_campaign'?{inputSchema:{...t.inputSchema,required:[...t.inputSchema.required,'requestId']}}:{})}));
 const idempotency=body=>{if(!body.requestId||typeof body.requestId!=='string'||body.requestId.length>100)throw new Error('Supply requestId (1–100 characters) for safe retries.');};
 // Legacy fixtures remain stored for audit, but cannot participate in the live workspace.
 function workspace(data){

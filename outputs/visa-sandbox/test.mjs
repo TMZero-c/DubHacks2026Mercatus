@@ -22,6 +22,7 @@ assert.throws(()=>buildRequest('authorize','180.00',null,config),/explicitly ent
 
 const billing={firstName:'Offline',lastName:'Fixture',address1:'1 Test St',locality:'Test',administrativeArea:'WA',postalCode:'00000',country:'US',email:'test@example.com'};
 const entered={number:'4111111111111111',expirationMonth:'12',expirationYear:'2030',securityCode:'123'};
+assert.throws(()=>buildRequest('authorize','19.88',null,config,undefined,{...entered,number:'4012888888881881'},billing),/public Visa test card/,'Demo mode rejects other Luhn-valid Visa card numbers');
 const direct=buildRequest('authorize','19.88',null,config,undefined,entered,billing,'later-test-reference');
 assert.deepEqual(JSON.parse(direct.options.body).paymentInformation.card,entered);
 assert.equal(JSON.parse(direct.options.body).clientReferenceInformation.code,'later-test-reference');

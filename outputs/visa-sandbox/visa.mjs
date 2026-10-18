@@ -3,6 +3,14 @@ import {existsSync} from 'node:fs';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 const envPath=fileURLToPath(new URL('.env',import.meta.url));
 export const host='apitest.visaacceptance.com'; // Intentionally no production switch.
+export const publicSandboxVisaNumber='4111111111111111';
+// These handles are created only by the private server vault. JSON from a browser
+// cannot manufacture one, even if it contains a paymentInstrument.id property.
+const storedInstruments=new WeakMap();
+export function storedPaymentInstrument(id){
+ if(!/^[-A-Za-z0-9]{1,100}$/.test(id||''))throw new Error('Invalid stored payment instrument');
+ const handle=Object.freeze({kind:'stored-payment-instrument'});storedInstruments.set(handle,id);return handle;
+}
 export function buildRequest(action,amount,id,config,date=new Date().toUTCString(),payment=null,billing=null,reference=null) {
  if(!/^\d{1,3}\.\d{2}$/.test(amount)||Number(amount)<=0||Number(amount)>500)throw new Error('Use a sandbox amount from 0.01 to 500.00');
  if(!['authorize','capture','reverse'].includes(action))throw new Error('Unknown operation');
@@ -16,14 +24,21 @@ export function buildRequest(action,amount,id,config,date=new Date().toUTCString
  if(action==='authorize'){
   if(!payment)throw new Error('A Visa Microform token or explicitly entered sandbox card is required.');
   data.processingInformation={capture:false};
-  if(typeof payment==='string'&&payment.trim())data.tokenInformation={transientTokenJwt:payment};
-  else data.paymentInformation={card:validateSandboxCard(payment)};
-  data.orderInformation.billTo=validateBilling(billing);
+  if(storedInstruments.has(payment)){
+   data.paymentInformation={paymentInstrument:{id:storedInstruments.get(payment)}};
+   // Visa's payment instrument already holds the billing address.
+   if(billing!==null)data.orderInformation.billTo=validateBilling(billing);
+  }else{
+   if(typeof payment==='string'&&payment.trim())data.tokenInformation={transientTokenJwt:payment};
+   else data.paymentInformation={card:validateSandboxCard(payment)};
+   data.orderInformation.billTo=validateBilling(billing);
+  }
  }
  return signedPost(path,data,config,date);
 }
 export function validateSandboxCard(value){
  const card={number:String(value?.number||'').replace(/\s/g,''),expirationMonth:String(value?.expirationMonth||'').padStart(2,'0'),expirationYear:String(value?.expirationYear||''),securityCode:String(value?.securityCode||'')};
+ if(card.number!==publicSandboxVisaNumber)throw new Error('Use the public Visa test card number ending 1111.');
  if(!/^4\d{12}(?:\d{3})?(?:\d{3})?$/.test(card.number)||!/^\d{3}$/.test(card.securityCode)||!/^(0[1-9]|1[0-2])$/.test(card.expirationMonth)||!/^20\d{2}$/.test(card.expirationYear)||new Date(+card.expirationYear,+card.expirationMonth,1)<=new Date())throw new Error('Enter a valid Visa sandbox card, CVV, and future expiry.');
  const sum=[...card.number].reverse().reduce((total,c,i)=>{let n=Number(c);if(i%2){n*=2;if(n>9)n-=9;}return total+n;},0);if(sum%10)throw new Error('Check the sandbox card number.');return card;
 }
@@ -36,12 +51,19 @@ export function validateBilling(value){
  return result;
 }
 export function signedPost(path,data,config,date=new Date().toUTCString()){
- if(!['/microform/v2/sessions','/pts/v2/payments','/tms/v1/instrumentidentifiers'].includes(path)&&!/^\/pts\/v2\/payments\/\d{1,60}\/(captures|reversals)$/.test(path))throw new Error('Invalid sandbox endpoint');
+ if(!['/microform/v2/sessions','/pts/v2/payments','/tms/v1/instrumentidentifiers','/tms/v1/paymentinstruments'].includes(path)&&!/^\/pts\/v2\/payments\/\d{1,60}\/(captures|reversals)$/.test(path))throw new Error('Invalid sandbox endpoint');
  const body=JSON.stringify(data),digest='SHA-256='+createHash('sha256').update(body).digest('base64');
  const fields=['host','v-c-date','(request-target)','digest','v-c-merchant-id'];
  const canonical=`host: ${host}\nv-c-date: ${date}\n(request-target): post ${path}\ndigest: ${digest}\nv-c-merchant-id: ${config.merchant}`;
  const signature=createHmac('sha256',Buffer.from(config.secret,'base64')).update(canonical).digest('base64');
  return {url:`https://${host}${path}`,options:{method:'POST',redirect:'error',headers:{host,'v-c-date':date,'v-c-merchant-id':config.merchant,digest,signature:`keyid="${config.key}", algorithm="HmacSHA256", headers="${fields.join(' ')}", signature="${signature}"`,'Content-Type':'application/json'},body,signal:AbortSignal.timeout(30000)}};
+}
+export function signedDelete(path,config,date=new Date().toUTCString()){
+ if(!/^\/tms\/v1\/paymentinstruments\/[-A-Za-z0-9]{1,100}$/.test(path))throw new Error('Invalid sandbox endpoint');
+ const fields=['host','v-c-date','(request-target)','v-c-merchant-id'];
+ const canonical=`host: ${host}\nv-c-date: ${date}\n(request-target): delete ${path}\nv-c-merchant-id: ${config.merchant}`;
+ const signature=createHmac('sha256',Buffer.from(config.secret,'base64')).update(canonical).digest('base64');
+ return {url:`https://${host}${path}`,options:{method:'DELETE',redirect:'error',headers:{host,'v-c-date':date,'v-c-merchant-id':config.merchant,signature:`keyid="${config.key}", algorithm="HmacSHA256", headers="${fields.join(' ')}", signature="${signature}"`},signal:AbortSignal.timeout(30000)}};
 }
 async function main(){
  if(existsSync(envPath))process.loadEnvFile(envPath);

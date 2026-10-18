@@ -1,33 +1,19 @@
 import {MongoClient,ObjectId} from 'mongodb';
 import {createHash,randomBytes,scrypt,timingSafeEqual} from 'node:crypto';
-import dns from 'node:dns';
 import {promisify} from 'node:util';
 
 const scryptAsync=promisify(scrypt);
 const SESSION_MS=30*24*60*60*1000;
 const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const DB_NAME='later';
+const unavailable=()=>new Error('Sign-in is temporarily unavailable. Please try again.');
 
-// Windows/Node often fails mongodb+srv SRV lookups (querySrv ECONNREFUSED) while
-// system DNS works. Prefer public resolvers so Atlas host discovery succeeds.
-try{
- dns.setDefaultResultOrder('ipv4first');
- const current=dns.getServers();
- if(!current.includes('8.8.8.8'))dns.setServers(['8.8.8.8','1.1.1.1',...current]);
-}catch{}
-
-function mongoSetupError(error){
- const message=String(error?.message||error||'');
- if(/querySrv|ECONNREFUSED|ENOTFOUND|getaddrinfo/i.test(message)){
-  return new Error('Cannot resolve MongoDB Atlas DNS. Check your network, then restart npm start.');
+// Driver errors can contain connection details. Only fixed messages cross this boundary.
+async function databaseOperation(operation,{duplicateEmail=false}={}){
+ try{return await operation();}
+ catch(error){
+  if(duplicateEmail&&error?.code===11000)throw new Error('An account with that email already exists.');
+  throw unavailable();
  }
- if(/TLS|ssl3|certificate|Server selection timed out|MongoServerSelectionError|MongoNetworkError|alert internal error/i.test(message)||error?.name?.startsWith?.('Mongo')){
-  return new Error('Cannot reach MongoDB Atlas. In Atlas → Network Access, add your current IP (or 0.0.0.0/0 for local demo), wait ~1 minute, then restart npm start.');
- }
- if(/bad auth|Authentication failed|auth failed/i.test(message)){
-  return new Error('MongoDB authentication failed. Check the username and password in MONGODB_URI.');
- }
- return error instanceof Error?error:new Error(message||'MongoDB connection failed.');
 }
 
 function hashToken(token){return createHash('sha256').update(token).digest('hex');}
@@ -56,22 +42,23 @@ function normalizePassword(password){
  return value;
 }
 
-export function createUserAuth(uri=process.env.MONGODB_URI){
+export function createUserAuth(uri=process.env.MONGODB_URI,{createClient=(value,options)=>new MongoClient(value,options)}={}){
  let client=null,db=null,ready=null;
  const configured=()=>typeof uri==='string'&&uri.trim().length>0;
 
  async function connect(){
-  if(!configured())throw new Error('Sign-in is unavailable. Add MONGODB_URI to outputs/committed-cart/.env, then restart npm start.');
+  if(!configured())throw new Error('Sign-in is unavailable. Add MONGODB_URI to the local app .env.');
   if(db)return db;
   if(!ready)ready=(async()=>{
-   client=new MongoClient(uri.trim(),{maxPoolSize:5,serverSelectionTimeoutMS:12000});
+   client=createClient(uri.trim(),{maxPoolSize:5,serverSelectionTimeoutMS:8000});
    await client.connect();
-   db=client.db(DB_NAME);
-   await db.collection('users').createIndex({email:1},{unique:true});
-   await db.collection('sessions').createIndex({tokenHash:1},{unique:true});
-   await db.collection('sessions').createIndex({expiresAt:1},{expireAfterSeconds:0});
+   const connected=client.db();
+   await connected.collection('users').createIndex({email:1},{unique:true});
+   await connected.collection('sessions').createIndex({tokenHash:1},{unique:true});
+   await connected.collection('sessions').createIndex({expiresAt:1},{expireAfterSeconds:0});
+   db=connected;
    return db;
-  })().catch(error=>{ready=null;client=null;db=null;throw mongoSetupError(error);});
+  })().catch(async()=>{const failed=client;ready=null;client=null;db=null;try{await failed?.close();}catch{}throw unavailable();});
   return ready;
  }
 
@@ -79,30 +66,25 @@ export function createUserAuth(uri=process.env.MONGODB_URI){
   const database=await connect();
   const token=randomBytes(32).toString('hex');
   const expiresAt=new Date(Date.now()+SESSION_MS);
-  await database.collection('sessions').insertOne({tokenHash:hashToken(token),userId:new ObjectId(userId),expiresAt,createdAt:new Date()});
+  await databaseOperation(()=>database.collection('sessions').insertOne({tokenHash:hashToken(token),userId:new ObjectId(userId),expiresAt,createdAt:new Date()}));
   return{token,expiresAt};
  }
 
  async function signup({email,password}){
-  const database=await connect();
   const normalized=normalizeEmail(email);
   const secret=normalizePassword(password);
+  const database=await connect();
   const {salt,hash}=await hashPassword(secret);
-  try{
-   const result=await database.collection('users').insertOne({email:normalized,passwordHash:hash,passwordSalt:salt,createdAt:new Date()});
-   const session=await createSession(result.insertedId);
-   return{user:publicUser({_id:result.insertedId,email:normalized}),token:session.token,expiresAt:session.expiresAt.toISOString()};
-  }catch(error){
-   if(error?.code===11000)throw new Error('An account with that email already exists.');
-   throw error;
-  }
+  const result=await databaseOperation(()=>database.collection('users').insertOne({email:normalized,passwordHash:hash,passwordSalt:salt,createdAt:new Date()}),{duplicateEmail:true});
+  const session=await createSession(result.insertedId);
+  return{user:publicUser({_id:result.insertedId,email:normalized}),token:session.token,expiresAt:session.expiresAt.toISOString()};
  }
 
  async function login({email,password}){
-  const database=await connect();
   const normalized=normalizeEmail(email);
   const secret=normalizePassword(password);
-  const user=await database.collection('users').findOne({email:normalized});
+  const database=await connect();
+  const user=await databaseOperation(()=>database.collection('users').findOne({email:normalized}));
   if(!user||!(await verifyPassword(secret,user.passwordSalt,user.passwordHash)))throw new Error('Incorrect email or password.');
   const session=await createSession(user._id);
   return{user:publicUser(user),token:session.token,expiresAt:session.expiresAt.toISOString()};
@@ -112,7 +94,7 @@ export function createUserAuth(uri=process.env.MONGODB_URI){
   const token=parseBearer(bearer);
   if(!token)return false;
   const database=await connect();
-  const result=await database.collection('sessions').deleteOne({tokenHash:hashToken(token)});
+  const result=await databaseOperation(()=>database.collection('sessions').deleteOne({tokenHash:hashToken(token)}));
   return result.deletedCount>0;
  }
 
@@ -120,9 +102,9 @@ export function createUserAuth(uri=process.env.MONGODB_URI){
   const token=parseBearer(bearer);
   if(!token)return null;
   const database=await connect();
-  const session=await database.collection('sessions').findOne({tokenHash:hashToken(token),expiresAt:{$gt:new Date()}});
+  const session=await databaseOperation(()=>database.collection('sessions').findOne({tokenHash:hashToken(token),expiresAt:{$gt:new Date()}}));
   if(!session)return null;
-  const user=await database.collection('users').findOne({_id:session.userId});
+  const user=await databaseOperation(()=>database.collection('users').findOne({_id:session.userId}));
   return user?publicUser(user):null;
  }
 

@@ -15,7 +15,9 @@
     "build:solana": "node outputs/solana-market/build.mjs",
     "test:solana": "node outputs/solana-market/test-svm.mjs",
     "deploy:solana": "node outputs/solana-market/deploy.mjs",
-    "test:x402": "node outputs/agent-payments/x402.test.mjs"
+    "test:x402": "node outputs/agent-payments/x402.test.mjs",
+    "test:collectibles": "node --test outputs/deal-collectibles/*.test.mjs",
+    "setup:collectibles": "npm --prefix outputs/deal-collectibles ci --ignore-scripts && node outputs/deal-collectibles/init-protocol.mjs"
   },
   "devDependencies": {
     "linkedom": "^0.18.12",
