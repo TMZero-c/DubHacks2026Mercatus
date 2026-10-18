@@ -23,7 +23,7 @@ let bridge;try{
  const extensionOrigin='chrome-extension://kahjaomahjnhcppboeagnjclfbnjgjje',nativeCookie='cart_session='+'b'.repeat(64);
  const nativeFlow=(await req('/api/card-flow',flowInput,{Origin:extensionOrigin,Cookie:nativeCookie})).data.flow;
  assert.equal((await req('/api/commit-card',{flow:nativeFlow},{Origin:extensionOrigin,Cookie:'cart_session='+cookie})).status,403,'A native flow cannot be consumed by a different shopper');
- const nativeIncomplete=await req('/api/commit-card',{flow:nativeFlow},{Origin:extensionOrigin,Cookie:nativeCookie});assert.ok([400,503].includes(nativeIncomplete.status));assert.match(nativeIncomplete.data.error,/billing|credentials/);
+ const nativeIncomplete=await req('/api/commit-card',{flow:nativeFlow},{Origin:extensionOrigin,Cookie:nativeCookie});assert.ok([400,503].includes(nativeIncomplete.status));assert.match(nativeIncomplete.data.error,/test card|credentials/);
  assert.equal((await req('/api/commit-test-card',flowInput)).status,404);
  const noBilling=await req('/api/commit',{...flowInput,cardToken:'not-a-token'},{Origin:'http://localhost:'+port,'X-Later-Card-Flow':flowResponse.data.flow});assert.ok([400,503].includes(noBilling.status));assert.match(noBilling.data.error,/billing|credentials/);
  assert.equal((await req('/api/state')).data.carts.length,0,'No Visa success or cart is fabricated on incomplete card entry');
