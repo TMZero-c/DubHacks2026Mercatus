@@ -104,7 +104,7 @@ function render(){
     const [label,tone]=({active:['Expires '+shortDate(pass.expiresAt),'neutral'],shared:['Shared','primary'],reserved:['Processing','warning'],redeemed:['Redeemed','neutral'],issuing:['Preparing','neutral']})[pass.status]||[pass.status,'neutral'];
     badges.append(pass.status==='active'?el('span',label,'deal-expiry'):badge(label,tone));
     if(pass.checkout?.capture?.status==='PENDING')badges.append(badge('Visa pending','warning'));
-    
+
     info.prepend(badges);product.append(image,info);card.append(product);
     if(pass.status==='active'){
       const actions=el('div',undefined,'deal-actions'),share=button('Create link'),use=button('Buy for '+money(pass.priceCents),'primary');share.title='Create a link to share this price';share.disabled=use.disabled=state.busy;
