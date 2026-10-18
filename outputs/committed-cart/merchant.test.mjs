@@ -26,6 +26,14 @@ function setup(patch={}){const state=newMerchantState(),c=createCampaign(state,i
  const b=cart({offers:[{amount:10000,expiresAt:new Date(now+60000).toISOString(),snapshotHash:'x'}]});b.offers[0].snapshotHash=b.digest;assert.equal(evaluate(state,c,b,now).eligible,false);
 }
 {
+ const {state,c}=setup({strategy:'competitive'});updateCampaign(state,c.id,{status:'active'},now);
+ const a=cart({shoppingTerms:{maxTotalCents:14000,minimumSavingsCents:1000,waitHours:12,deliveryBy:date,condition:'new'}});
+ assert.equal(runAgent(state,{[a.id]:a},now).submitted,1,'competitive merchant can meet the shopper target instead of rejecting a profitable bid');
+ assert.equal(a.offers[0].amount,14000);
+ const b=cart({shoppingTerms:{...a.shoppingTerms,maxTotalCents:13999,minimumSavingsCents:1001}});
+ assert.equal(evaluate(state,c,b,now).eligible,false,'merchant margin and incentive floor still apply');
+}
+{
  const {state,c}=setup();updateCampaign(state,c.id,{status:'active'},now);
  for(const a of [cart({status:'released'}),cart({published:false}),cart({expiresAt:new Date(now-1).toISOString()}),cart({selectedOfferId:'old'}),cart({sellers:'Only Costco'}),cart({items:[{name:'Sony WH-1000XM5',variant:'Black · New',cents:15000,quantity:1}]}),cart({items:[{name:'Sony WH-1000XM4',variant:'Silver · New',cents:15000,quantity:1}]}),cart({deliveryDate:new Date(now).toISOString().slice(0,10)})])assert.equal(evaluate(state,c,a,now).eligible,false);
  assert.equal(previewCampaign(state,{campaignId:c.id},{private:cart({published:false}),closed:cart({status:'released'})},now).total,0);

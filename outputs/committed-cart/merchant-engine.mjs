@@ -52,8 +52,10 @@ export function evaluate(state,campaign,cart,now=Date.now(),{preview=false}={}){
  floor=Math.max(floor,list-incentiveLimit);
  // Compete only as far as necessary; never cross merchant margin, discount, inventory or budget bounds.
  const currentBest=Math.min(cart.amount,...(cart.offers||[]).filter(o=>Date.parse(o.expiresAt)>now&&o.snapshotHash===cart.digest).map(o=>o.amount));
- const amount=campaign.strategy==='fixed_discount'?floor:Math.max(floor,Math.min(list,currentBest-1));
+ const shopperLimit=cart.shoppingTerms?Math.min(cart.shoppingTerms.maxTotalCents,cart.amount-cart.shoppingTerms.minimumSavingsCents):cart.amount;
+ const amount=campaign.strategy==='fixed_discount'?floor:Math.max(floor,Math.min(list,currentBest-1,shopperLimit));
  if(amount<=0||amount>=currentBest)return reject(remaining===0?'Daily incentive budget reserved':'No profitable price beats the best offer');
+ if(cart.shoppingTerms&&(amount>cart.shoppingTerms.maxTotalCents||cart.amount-amount<cart.shoppingTerms.minimumSavingsCents))return reject('Cannot meet shopper price and savings terms');
  const incentiveCents=Math.max(0,list-amount);return{eligible:true,intentId:cart.id,campaignId:campaign.id,merchantKey:norm(campaign.merchant),amount,incentiveCents,marginPct:Math.round((amount-cost)/amount*10000)/100,deliveryDate,units,reason:campaign.strategy==='competitive'?'Beat best offer within pricing limits':'Maximum discount within pricing limits'};
 }
 export function runAgent(state,carts,now=Date.now()){
