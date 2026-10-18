@@ -1,10 +1,26 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Later</title><link rel="stylesheet" href="popup.css"></head>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mercatus</title>
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="popup.css">
+</head>
 <body class="auth-only">
-<header><a class="wordmark" href="#" aria-label="Later">later<span>.</span></a><div id="headerActions"><button id="historyBack" class="quiet" hidden>Back</button><button id="read" class="quiet" hidden>Refresh cart</button><button id="logout" class="quiet" hidden>Log out</button></div></header>
+<header class="popup-header">
+  <div id="headerActions" class="header-actions">
+    <button id="historyBack" class="quiet" hidden>Back</button>
+    <button id="read" class="quiet" hidden>Refresh cart</button>
+    <button id="logout" class="quiet" hidden>Log out</button>
+  </div>
+  <a class="wordmark" href="#" aria-label="mercatus">mercatus<span>.</span></a>
+  <span class="header-spacer" aria-hidden="true"></span>
+</header>
+<div class="progress-track" id="progressTrack" aria-hidden="true"><span class="progress-fill progress-step-1"></span></div>
 <main id="app" aria-busy="true">
 <section id="auth" class="auth">
-<div class="empty-shape" aria-hidden="true">L<span>.</span></div>
+<div class="empty-shape" aria-hidden="true">m<span>.</span></div>
 <h1 id="authTitle">Log in</h1>
 <p id="authHint">Sign in to wait & save with Later.</p>
 <form id="authForm">
@@ -16,26 +32,54 @@
 </form>
 <button id="authToggle" class="quiet wide" type="button">Need an account? Sign up</button>
 </section>
-<section id="home" class="empty" hidden><div class="empty-shape" aria-hidden="true">L<span>.</span></div><h1>Your activity</h1><p>Open a shopping page to start a new wait.</p><button id="reviewHistory" class="primary">Review past orders</button></section>
+<section id="home" class="empty" hidden><div class="empty-shape" aria-hidden="true">m<span>.</span></div><h1>Your activity</h1><p>Open a shopping page to start a new wait.</p><button id="reviewHistory" class="primary">Review past orders</button></section>
 <section id="history" hidden><div class="section-heading"><h1>Your activity</h1><span id="historyCount"></span></div><div id="historyList"></div><p id="historyEmpty" class="history-empty" hidden>No orders to review yet.</p><div id="historyPagination" class="pagination" hidden><button id="historyPrevious" aria-label="Previous orders">‹</button><span id="historyPageCount"></span><button id="historyNext" aria-label="Next orders">›</button></div></section>
-<section id="empty" class="empty" hidden><div class="empty-shape" aria-hidden="true">L<span>.</span></div><h1>Your shopping cart</h1><p id="emptyMessage">Checking this page…</p><button id="retry" class="primary">Read this page</button></section>
+<section id="empty" class="empty" hidden><div class="empty-shape" aria-hidden="true">m<span>.</span></div><h1>Your shopping cart</h1><p id="emptyMessage">Checking this page…</p><button id="retry" class="primary">Read this page</button></section>
 <section id="cartView" hidden>
-<div class="section-heading"><h1 id="heading">Your cart</h1><span id="itemCount"></span></div>
-<article class="product"><div class="product-image"><img id="productImage" alt="" referrerpolicy="no-referrer" hidden><span id="imageFallback" aria-hidden="true">L.</span></div><div class="product-info"><span id="storeName"></span><h2 id="productName"></h2><p id="variant"></p><div class="product-bottom"><strong id="itemPrice"></strong><span id="quantity"></span></div></div></article>
+<div class="product-heading">
+  <div class="product-heading-copy">
+    <p class="overline"><span id="heading">Your cart</span> <span id="itemCount"></span></p>
+    <h2 id="productName"></h2>
+    <p class="muted" id="storeName"></p>
+    <p class="variant-line" id="variant"></p>
+    <div class="product-meta"><strong id="itemPrice"></strong><span id="quantity"></span></div>
+  </div>
+  <img class="bag bag-wave" src="assets/bags/red-happy.svg" width="65" height="65" alt="" aria-hidden="true">
+  <div class="product-image sr-only" aria-hidden="true">
+    <img id="productImage" alt="" referrerpolicy="no-referrer" hidden>
+    <span id="imageFallback">m.</span>
+  </div>
+</div>
 <div id="pagination" class="pagination" hidden><button id="previous" aria-label="Previous item">‹</button><span id="pageCount"></span><button id="next" aria-label="Next item">›</button></div>
 <div id="choices">
-<div class="price-line"><span>Buy now</span><strong id="total"></strong></div>
-<div class="wait-card"><div class="wait-top"><div><h2>Wait & save</h2><p id="estimateLabel">Estimated price</p></div><div class="estimate"><strong id="estimate">—</strong><span id="saving"></span></div></div><div id="durations" class="segments" role="group" aria-label="How long can you wait?"><button data-hours="0.25" aria-pressed="false">15 min</button><button data-hours="1" aria-pressed="true">1 hour</button><button data-hours="12" aria-pressed="false">Overnight</button></div></div>
-<a id="betterDeal" class="better-deal" target="_blank" rel="noopener noreferrer" hidden><span><strong id="dealStore"></strong><span id="dealDetail">Check variant · tax & delivery extra</span></span><strong id="dealPrice"></strong><span aria-hidden="true">↗</span></a>
-<button id="compare" class="compare">Find a lower price <span aria-hidden="true">↗</span></button>
+<div class="buy-now-row"><span>Buy now</span><strong id="total"></strong></div>
+<div class="savings-card">
+  <div class="savings-top">
+    <div><span>Wait &amp; save</span><small id="estimateLabel">Estimated price</small></div>
+    <div class="price-stack"><strong id="estimate">—</strong><small id="saving"></small></div>
+  </div>
+  <div id="durations" class="segment-control" role="group" aria-label="How long can you wait?">
+    <button type="button" data-hours="0.25" aria-pressed="false">15 min</button>
+    <button type="button" data-hours="1" aria-pressed="true">1 hour</button>
+    <button type="button" data-hours="12" aria-pressed="false">Overnight</button>
+  </div>
 </div>
-<div id="commitment" hidden><div class="status-card"><span class="status-dot"></span><div><h2 id="commitTitle">Waiting for offers</h2><p id="commitDetail"></p></div><strong id="offerCount"></strong></div><div id="offer" class="offer" hidden><div><strong id="offerMerchant"></strong><p id="offerTerms"></p></div><button id="selectOffer"></button></div><button id="release" class="quiet wide">Cancel wait & release hold</button></div>
-<div id="confirmation" hidden><div class="confirm-heading"><h2>Confirm your wait</h2><button id="back" class="quiet">Back</button></div><div class="terms"><span>Wait</span><strong id="confirmDuration"></strong><span>Maximum test hold</span><strong id="confirmTotal"></strong></div><label class="consent"><input id="consent" type="checkbox"><span>Allow a test hold and share these items with merchants for offers.</span></label><p class="test-label">Test mode · no purchase is made</p></div>
+<p class="hint">More time gives merchants a better chance to beat your price.</p>
+<a id="betterDeal" class="better-deal" target="_blank" rel="noopener noreferrer" hidden><span><strong id="dealStore"></strong><span id="dealDetail">Check variant · tax & delivery extra</span></span><strong id="dealPrice"></strong><span aria-hidden="true">↗</span></a>
+<button id="compare" class="compare" type="button">Find a lower price <span aria-hidden="true">↗</span></button>
+</div>
+<div id="commitment" hidden><div class="status-card"><span class="status-dot"></span><div><h2 id="commitTitle">Waiting for offers</h2><p id="commitDetail"></p></div><strong id="offerCount"></strong></div><div id="offer" class="offer" hidden><div><strong id="offerMerchant"></strong><p id="offerTerms"></p></div><button id="selectOffer" type="button"></button></div><button id="release" class="quiet wide" type="button">Cancel wait & release hold</button></div>
+<div id="confirmation" hidden><div class="confirm-heading"><h2>Confirm your wait</h2><button id="back" class="quiet" type="button">Back</button></div><div class="terms"><span>Wait</span><strong id="confirmDuration"></strong><span>Maximum test hold</span><strong id="confirmTotal"></strong></div><label class="consent"><input id="consent" type="checkbox"><span>Allow a test hold and share these items with merchants for offers.</span></label><p class="test-label">Test mode · no purchase is made</p></div>
 </section>
 <div id="message" class="message" role="status" hidden></div>
 </main>
-<footer id="footer" hidden><div class="payment-line"><span>Pay with</span><strong class="visa">VISA</strong><span id="paymentHint">Test mode</span></div><button id="primary" class="primary">Wait & save <span aria-hidden="true">→</span></button></footer>
+<footer id="footer" class="popup-footer" hidden>
+<div class="pay-row"><span>Pay with <b class="visa">VISA</b></span><span id="paymentHint">Test mode</span></div>
+<button id="primary" class="primary" type="button">Wait &amp; save →</button>
+</footer>
 <script src="collector.js"></script><script type="module" src="popup.js"></script>
-<section id="cardEntry" class="card-entry" hidden><button id="closeCard" class="quiet">← Back to cart</button>
+<section id="cardEntry" class="card-entry" hidden><button id="closeCard" class="quiet" type="button">← Back to cart</button>
 <form id="nativeBilling"><h1>Billing details</h1><div class="billing-grid"><label>First name<input name="firstName" autocomplete="given-name" required></label><label>Last name<input name="lastName" autocomplete="family-name" required></label><label class="full">Email<input name="email" type="email" autocomplete="email" required></label><label class="full">Address<input name="address1" autocomplete="billing street-address" required></label><label>City<input name="locality" autocomplete="billing address-level2" required></label><label>State / region<input name="administrativeArea" autocomplete="billing address-level1" required></label><label>Postal code<input name="postalCode" autocomplete="billing postal-code" required></label><label>Country code<input name="country" maxlength="2" pattern="[A-Za-z]{2}" placeholder="US" autocomplete="billing country" required></label></div><button class="primary" type="submit">Continue to card →</button></form>
-<form id="nativePayment" hidden><div class="section-heading"><h1>Confirm your wait</h1><strong class="visa">VISA</strong></div><button id="editNativeBilling" class="quiet" type="button">Edit billing details</button><div class="card-total"><span>Maximum test hold</span><strong id="cardAmount"></strong></div><label>Visa sandbox card<input id="enteredCardNumber" inputmode="numeric" autocomplete="off" maxlength="23" required></label><div class="billing-grid expiry-grid"><label>Month<input id="enteredCardMonth" placeholder="MM" inputmode="numeric" maxlength="2" required></label><label>Year<input id="enteredCardYear" placeholder="YYYY" inputmode="numeric" maxlength="4" required></label><label>CVV<input id="enteredCardCvv" type="password" inputmode="numeric" autocomplete="off" maxlength="3" required></label></div><label class="token-consent"><input id="tokenizeCard" type="checkbox">Tokenize this test card to check for duplicate carts</label><button class="primary" id="authorizeCard" type="submit">Authorize test hold →</button></form><p id="cardMessage" class="card-message" role="alert"></p></section></body></html>
+<form id="nativePayment" hidden><div class="section-heading"><h1>Confirm your wait</h1><strong class="visa">VISA</strong></div><button id="editNativeBilling" class="quiet" type="button">Edit billing details</button><div class="card-total"><span>Maximum test hold</span><strong id="cardAmount"></strong></div><label>Visa sandbox card<input id="enteredCardNumber" inputmode="numeric" autocomplete="off" maxlength="23" required></label><div class="billing-grid expiry-grid"><label>Month<input id="enteredCardMonth" placeholder="MM" inputmode="numeric" maxlength="2" required></label><label>Year<input id="enteredCardYear" placeholder="YYYY" inputmode="numeric" maxlength="4" required></label><label>CVV<input id="enteredCardCvv" type="password" inputmode="numeric" autocomplete="off" maxlength="3" required></label></div><label class="token-consent"><input id="tokenizeCard" type="checkbox">Tokenize this test card to check for duplicate carts</label><button class="primary" id="authorizeCard" type="submit">Authorize test hold →</button></form><p id="cardMessage" class="card-message" role="alert"></p></section>
+</body>
+</html>

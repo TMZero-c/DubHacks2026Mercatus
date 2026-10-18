@@ -1,5 +1,7 @@
-/* Mercatus popup design tokens
-   Fonts: local Nunito woff2 (MV3 — no remote font URLs)
+/* Mercatus popup design tokens — SOURCE OF TRUTH.
+   Keep outputs/amazon-extension/styles/tokens.css in sync with this file
+   (extension copy only differs in @font-face urls).
+   Fonts: local Nunito woff2 (MV3 — no remote font URLs).
    Paths are relative to this file (outputs/shared/). */
 
 /* -------------------------------------------------------------------------- */
