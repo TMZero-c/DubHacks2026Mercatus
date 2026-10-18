@@ -1,6 +1,18 @@
 # Later — Chrome extension
 
-Start the backend with `node outputs/committed-cart/server.mjs`. In Chrome 127+, load this folder unpacked at `chrome://extensions`, or reload the existing Later extension. Refresh any open Amazon pages after an update.
+## Sign-in (MongoDB Atlas)
+
+Shopper sign-up and log-in are required before the cart UI opens. Accounts are stored in your MongoDB Atlas cluster through the local backend (the extension never talks to Atlas directly).
+
+1. Copy `outputs/committed-cart/.env.example` to `outputs/committed-cart/.env` if you do not already have one.
+2. Set `MONGODB_URI` to your Atlas connection string (keep this file local; it is git-ignored).
+3. From the repo root: `npm install` then `npm start`.
+4. Load or reload `outputs/amazon-extension` unpacked at `chrome://extensions`.
+5. Open the Later popup, create an account or log in, then use Wait & save as before.
+
+Session tokens live in `chrome.storage.local` and are sent as `Authorization: Bearer` to `http://localhost:4318`. Use **Log out** in the popup header to end the session.
+
+Start the backend with `node outputs/committed-cart/server.mjs` (or `npm start`). In Chrome 127+, load this folder unpacked at `chrome://extensions`, or reload the existing Later extension. Refresh any open Amazon pages after an update.
 
 ## Shopper experience
 
@@ -16,7 +28,7 @@ You can compare another product while an existing cart waits; View waiting cart 
 
 The only permissions are activeTab, scripting and storage; the only host permission is `http://localhost:4318/*`. Other shopping pages are accessed on explicit toolbar action using activeTab. No all-sites background access, cookies API, browsing history, telemetry or client-side API keys.
 
-The local API accepts credentialed requests from the exact installed development extension origin `chrome-extension://kahjaomahjnhcppboeagnjclfbnjgjje`. If an unpacked installation receives a different ID, update `extensionOrigin` in `server.mjs`. It rejects POSTs from foreign website origins. Visa keys and SerpApi keys remain in local `.env` files and are excluded from archives.
+The local API accepts credentialed requests from the pinned development extension origin `chrome-extension://kahjaomahjnhcppboeagnjclfbnjgjje` and the localhost shopper page. If the unpacked extension receives a different ID, update `extensionOrigin` in `server.mjs`. It rejects POSTs from foreign website origins. Visa keys and SerpApi keys remain in local `.env` files and are excluded from archives.
 
 ## Prices and estimates
 

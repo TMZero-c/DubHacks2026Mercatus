@@ -44,7 +44,7 @@ The merchant integration test uses an isolated local port and synthetic carts. I
 
 ## Credentials and scope
 
-Only blank `.env.example` templates are committed. Visa/SerpAPI keys, `.env` files, MCP credentials, local payment state, caches, logs and captured screenshots are excluded. Supply your own keys locally. This is a loopback-only shared merchant demo, not a production service or a demonstrated high-throughput payments system.
+Only blank `.env.example` templates are committed. MongoDB connection strings, Visa, SerpAPI, and Gemini keys, `.env` files, MCP credentials, local payment state, caches, logs and captured screenshots are excluded. Supply your own keys locally. This is a loopback-only shared merchant demo, not a production service or a demonstrated high-throughput payments system.
 
 [Shopper/API details](outputs/committed-cart/README.md) · [Visa sandbox setup](outputs/visa-sandbox/README.md)
 

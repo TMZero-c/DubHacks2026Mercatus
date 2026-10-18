@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {validateCart} from './engine.mjs';
-const root=dirname(fileURLToPath(import.meta.url)),dir=await mkdtemp(join(tmpdir(),'later-merchant-qa-')),port=4326,base='http://127.0.0.1:'+port,env={...process.env,LATER_STATE_DIR:dir,LATER_PORT:String(port)};
+const root=dirname(fileURLToPath(import.meta.url)),dir=await mkdtemp(join(tmpdir(),'later-merchant-qa-')),port=4326,base='http://127.0.0.1:'+port,env={...process.env,LATER_STATE_DIR:dir,LATER_PORT:String(port),MONGODB_URI:''};
 const cookie='a'.repeat(64),now=Date.now();const cart=validateCart({items:[{name:'Test headphones',variant:'Black · New',price:'150',quantity:1}],hours:12,sellers:'Authorized retailers only',deliveryDate:new Date(now+7*86400000).toISOString().slice(0,10),publish:true,consent:true},now);Object.assign(cart,{status:'authorized',visaStatus:'AUTHORIZED',authorizationId:'123',authorizedAmount:15000,offers:[],owner:createHash('sha256').update(cookie).digest('hex')});await writeFile(join(dir,'state.json'),JSON.stringify({[cart.id]:cart}),{mode:0o600});
 let server,logs='';function start(){server=spawn(process.execPath,[join(root,'server.mjs')],{env,stdio:['ignore','pipe','pipe']});server.stdout.on('data',x=>logs+=x);server.stderr.on('data',x=>logs+=x);return server;}
 async function ready(){for(let i=0;i<80;i++){try{if((await fetch(base+'/api/state')).ok)return;}catch{}if(server.exitCode!==null)throw new Error(logs);await new Promise(r=>setTimeout(r,100));}throw new Error('Local test server did not start. '+logs);}
@@ -21,9 +21,8 @@ let bridge;try{
  const details=await req('/api/card-flow-info',{}, {Origin:'http://localhost:'+port,'X-Later-Card-Flow':flowResponse.data.flow});assert.equal(details.status,200);assert.equal(details.data.amount,2500);
  assert.equal((await req('/api/card-flow-info',{}, {Origin:'http://localhost:'+port,'X-Later-Card-Flow':'bad'})).status,403);
  const extensionOrigin='chrome-extension://kahjaomahjnhcppboeagnjclfbnjgjje',nativeCookie='cart_session='+'b'.repeat(64);
- const nativeFlow=(await req('/api/card-flow',flowInput,{Origin:extensionOrigin,Cookie:nativeCookie})).data.flow;
- assert.equal((await req('/api/commit-card',{flow:nativeFlow},{Origin:extensionOrigin,Cookie:'cart_session='+cookie})).status,403,'A native flow cannot be consumed by a different shopper');
- const nativeIncomplete=await req('/api/commit-card',{flow:nativeFlow},{Origin:extensionOrigin,Cookie:nativeCookie});assert.ok([400,503].includes(nativeIncomplete.status));assert.match(nativeIncomplete.data.error,/test card|credentials/);
+ assert.equal((await req('/api/card-flow',flowInput,{Origin:extensionOrigin,Cookie:nativeCookie})).status,503,'The extension requires MongoDB sign-in');
+ assert.equal((await req('/api/commit-card',{flow:'none'},{Origin:extensionOrigin,Cookie:nativeCookie})).status,503);
  assert.equal((await req('/api/commit-test-card',flowInput)).status,404);
  const noBilling=await req('/api/commit',{...flowInput,cardToken:'not-a-token'},{Origin:'http://localhost:'+port,'X-Later-Card-Flow':flowResponse.data.flow});assert.ok([400,503].includes(noBilling.status));assert.match(noBilling.data.error,/billing|credentials/);
  assert.equal((await req('/api/state')).data.carts.length,0,'No Visa success or cart is fabricated on incomplete card entry');

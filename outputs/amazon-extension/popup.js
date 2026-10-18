@@ -5,6 +5,9 @@ const API='http://localhost:4318', $=id=>document.getElementById(id),money=c=>ne
 const DEMO_CARD=Object.freeze({number:'4111111111111111',expirationMonth:'12',expirationYear:'2031',securityCode:'123'});
 let draft=null,current=null,index=0,hours=1,confirming=false,online=false,reading=false,searching=false,operation=false,revision=0,lastImport=0,quotes={},searchCache={};
 let pageMode='checking',historyOpen=false,viewingHistory=false,historyCart=null,historyPage=0,historyCarts=[],activeTabId=null;
+let sessionToken='',authUser=null,authMode='login',authBusy=false,authEpoch=0;
+const cacheKey=(name,owner=authUser?.id)=>name+':'+owner;
+const accountCacheName=key=>key==='laterCart'||key==='laterCacheOwner'||['laterUI','laterState','laterHistory'].some(name=>key===name||key.startsWith(name+':'));
 const active=c=>c&&['authorized','authorizing','reversing','needs_review'].includes(c.status);
 const signature=items=>JSON.stringify(items.map(x=>[x.name,x.variant,x.url||'',Number(x.quantity),Number(x.price??x.cents/100)]));
 const sameCommitment=()=>active(current)&&draft&&signature(current.items)===signature(draft.items);
@@ -20,11 +23,52 @@ function normalize(payload){
 }
 function safeLink(value){try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch{return'';}}
 function safeImage(value){return safeLink(value);}
-function saveUI(){return chrome.storage.session.set({laterUI:{draft,hours,quotes,searchCache,lastImport}}).catch(()=>{});}
+function saveUI(){if(!authUser)return Promise.resolve();return chrome.storage.session.set({[cacheKey('laterUI')]:{draft,hours,quotes,searchCache,lastImport}}).catch(()=>{});}
 const queryFor=productQuery;
-async function request(path,body){
- const response=await fetch(API+path,{credentials:'include',cache:'no-store',signal:AbortSignal.timeout(['/api/compare','/api/cards','/api/commit-saved-card'].includes(path)?30000:7000),...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
- const data=await response.json();if(!response.ok)throw new Error(data.error||'Please try again.');return data;
+async function request(path,body,{auth=true}={}){
+ const epoch=authEpoch;
+ const headers={};if(body)headers['Content-Type']='application/json';if(auth&&sessionToken)headers.Authorization='Bearer '+sessionToken;
+ const response=await fetch(API+path,{credentials:'include',cache:'no-store',signal:AbortSignal.timeout(path==='/api/cards'&&body?65000:['/api/compare','/api/commit-saved-card','/api/card-flow'].includes(path)?30000:7000),headers,...(body?{method:'POST',body:JSON.stringify(body)}:{})});
+ const data=await response.json().catch(()=>({}));
+ if(epoch!==authEpoch){const error=new Error('Session changed.');error.code='session_changed';throw error;}
+ if(response.status===401){const err=new Error(data.error||'Sign in to continue.');err.code='auth';if(auth&&path!=='/api/auth/me'){await clearSession();showAuth();}throw err;}
+ if(!response.ok)throw new Error(data.error||'Please try again.');return data;
+}
+function resetAccountState(){
+ draft=null;current=null;historyCarts=[];historyCart=null;index=0;hours=1;confirming=false;online=false;reading=false;searching=false;operation=false;lastImport=0;quotes={};searchCache={};revision++;activeTabId=null;historyOpen=false;viewingHistory=false;historyPage=0;pageMode='checking';
+ closeCard();for(const id of ['primary','read','retry','useSavedCard','removeSavedCard','useAnotherCard','savedCardChoice','closeCard','addCard'])$(id).disabled=false;$('nativePayment').hidden=true;$('savedCardDetails').hidden=true;$('savedCardChoice').replaceChildren();$('savedCardNumber').textContent='';$('savedCardExpiry').textContent='';$('historyList').replaceChildren();
+ for(const id of ['productName','storeName','variant','itemPrice','quantity','total','commitDetail','offerMerchant','offerTerms','estimate','saving','dealStore','dealPrice','confirmTotal','confirmDuration','itemCount','historyCount','offerCount'])$(id).textContent='';
+ for(const id of ['productName','variant','offerTerms','logout'])$(id).removeAttribute('title');$('useSavedCard').textContent='Use this card →';$('productImage').removeAttribute('src');$('productImage').alt='';$('productImage').hidden=true;$('betterDeal').removeAttribute('href');$('betterDeal').hidden=true;$('consent').checked=false;$('authPassword').value='';document.body.classList.remove('has-deal','multiple','has-message');
+}
+async function clearAccountCache(epoch=authEpoch){
+ resetAccountState();const cached=await chrome.storage.session.get(null).catch(()=>({}));if(epoch!==authEpoch)return;const keys=Object.keys(cached).filter(accountCacheName);if(keys.length)await chrome.storage.session.remove(keys).catch(()=>{});
+}
+async function saveSession(token,user){
+ if(authUser?.id&&authUser.id!==user?.id){const epoch=++authEpoch;await clearAccountCache(epoch);if(epoch!==authEpoch)return;}
+ authEpoch++;sessionToken=token||'';authUser=user||null;await chrome.storage.local.set({laterAuth:{token:sessionToken,user:authUser}}).catch(()=>{});
+}
+async function clearSession(){
+ const oldToken=sessionToken,epoch=++authEpoch;sessionToken='';authUser=null;
+ const removal=(async()=>{const stored=await chrome.storage.local.get('laterAuth').catch(()=>({}));if(epoch===authEpoch&&stored.laterAuth?.token===oldToken)await chrome.storage.local.remove('laterAuth').catch(()=>{});})();
+ await clearAccountCache(epoch);await removal;if(epoch===authEpoch)$('authEmail').value='';
+}
+function showAuth(message=''){
+ document.body.classList.add('auth-only');authUser=null;$('cardEntry').hidden=true;
+ $('auth').hidden=false;$('home').hidden=true;$('history').hidden=true;$('empty').hidden=true;$('cartView').hidden=true;$('footer').hidden=true;
+ $('historyBack').hidden=true;$('read').hidden=true;$('logout').hidden=true;$('app').setAttribute('aria-busy','false');
+ setAuthMode(authMode);notify(message);
+}
+function setAuthMode(mode){
+ authMode=mode==='signup'?'signup':'login';
+ $('authTitle').textContent=authMode==='signup'?'Create account':'Log in';
+ $('authHint').textContent=authMode==='signup'?'Save waits to your Later account.':'Sign in to wait & save with Later.';
+ $('authSubmit').textContent=authMode==='signup'?'Sign up':'Log in';
+ $('authToggle').textContent=authMode==='signup'?'Already have an account? Log in':'Need an account? Sign up';
+ $('authPassword').autocomplete=authMode==='signup'?'new-password':'current-password';
+}
+function showAppShell(){
+ document.body.classList.remove('auth-only');$('auth').hidden=true;$('logout').hidden=false;$('logout').title=authUser?.email||'Log out';
+
 }
 function baseline(){const fresh={};for(const item of draft.items){const cache=searchCache[queryFor(item).toLowerCase()];if(cache&&Date.now()-cache.at<3600000){const offers=lowerOffers(cache.offers,Math.round(Number(item.price)*100));if(offers.length)fresh[itemKey(item)]=Math.min(...offers.map(x=>x.price));}}return cartBaseline(draft.items,fresh);}
 function renderHistory(){
@@ -35,6 +79,8 @@ function renderHistory(){
 }
 function historyStatus(cart){return cart.selectedOfferId?'Offer selected':({authorized:'Waiting for offers',released:'Hold released',declined:'Hold declined',needs_review:'Hold needs review',authorizing:'Authorization pending',reversing:'Releasing hold'})[cart.status]||'Wait ended';}
 function render(){
+ if(!authUser){showAuth();return;}
+ showAppShell();
  const neutral=pageMode!=='shopping'&&!viewingHistory;
  $('home').hidden=!neutral||historyOpen||pageMode==='checking';$('history').hidden=!neutral||!historyOpen;$('historyBack').hidden=!historyOpen&&!viewingHistory;$('read').hidden=neutral||viewingHistory;
  if(neutral){$('empty').hidden=pageMode!=='checking';$('retry').hidden=true;$('cartView').hidden=true;$('footer').hidden=true;$('app').setAttribute('aria-busy',String(pageMode==='checking'));document.body.classList.remove('has-deal','multiple');if(historyOpen)renderHistory();return;}
@@ -79,45 +125,46 @@ async function acceptImport(cart,{fromPage=false}={}){
  }catch(e){if(fromPage){pageMode='home';render();}notify(e.message);}
 }
 async function readPage({refreshState=true}={}){
- if(reading)return;reading=true;$('read').disabled=true;$('retry').disabled=true;notify();
+ if(!authUser||reading)return;const epoch=authEpoch;reading=true;$('read').disabled=true;$('retry').disabled=true;notify();
  try{
-  const [tab]=await chrome.tabs.query({active:true,currentWindow:true});const url=new URL(tab?.url||'');activeTabId=tab?.id;
+  const [tab]=await chrome.tabs.query({active:true,currentWindow:true});if(epoch!==authEpoch)return;const url=new URL(tab?.url||'');activeTabId=tab?.id;
   if(url.protocol!=='https:')throw new Error('Open a product or shopping cart, then try again.');
   if(url.hostname==='www.amazon.com'&&url.pathname.startsWith('/cart/smart-wagon')){await chrome.tabs.update(tab.id,{url:'https://www.amazon.com/gp/cart/view.html'});throw new Error('Open the full cart, then refresh here.');}
   await chrome.scripting.executeScript({target:{tabId:tab.id},files:['collector.js']});
-  const result=await chrome.scripting.executeScript({target:{tabId:tab.id},func:()=>collectShoppingPage()});const payload=result[0]?.result;
+  const result=await chrome.scripting.executeScript({target:{tabId:tab.id},func:()=>collectShoppingPage()});const payload=result[0]?.result;if(epoch!==authEpoch)return;
   if(!payload||payload.error)throw new Error(payload?.error||'Could not read this page. Try its full cart.');
   const cart={payload,tabId:tab.id,at:Math.max(Date.now(),lastImport+1)};await acceptImport(cart,{fromPage:true});await chrome.storage.session.set({laterCart:cart});if(refreshState)await syncState();
- }catch(e){pageMode='home';historyOpen=false;viewingHistory=false;notify();render();}
+ }catch(e){if(epoch!==authEpoch)return;pageMode='home';historyOpen=false;viewingHistory=false;notify();render();}
  finally{reading=false;$('read').disabled=false;$('retry').disabled=false;}
 }
 async function syncState(){
+ if(!authUser)return false;
  try{const data=await request('/api/state');online=!!data.configured;if($('message').textContent.startsWith('Later is offline.'))notify();if(!online)notify('Connect Visa in the local app before starting a wait.');
   historyCarts=data.carts||[];const pending=historyCarts.find(active);current=pending||null;
   if(pending&&(!draft||sameCommitment())){const old=draft?.items||[];draft=normalize({source:'Shopping cart',items:pending.items.map(x=>({...x,image:old.find(o=>o.url===x.url)?.image||''}))});confirming=false;}
-  await chrome.storage.session.set({laterState:pending||null,laterHistory:historyCarts});render();return true;
- }catch{online=false;notify('Later is offline. Start the local app, then retry.');render();return false;}
+  await chrome.storage.session.set({[cacheKey('laterState')]:pending||null,[cacheKey('laterHistory')]:historyCarts});render();return true;
+ }catch(e){if(e.code==='session_changed')return false;if(!authUser){notify(e.message||'Sign in to continue.');render();return false;}online=false;notify('Later is offline. Start the local app, then retry.');render();return false;}
 }
 async function compare(){
- if(searching||!draft)return;const item=draft.items[index],query=queryFor(item),key=query.toLowerCase(),requestRevision=revision;searching=true;notify();render();
+ if(!authUser||searching||!draft)return;const epoch=authEpoch,item=draft.items[index],query=queryFor(item),key=query.toLowerCase(),requestRevision=revision;searching=true;notify();render();
  try{
   let cached=searchCache[key];if(!cached||Date.now()-cached.at>=3600000){const data=await request('/api/compare',{query});cached={at:Date.now(),offers:data.offers||[]};searchCache[key]=cached;}
   if(requestRevision!==revision)return;const eligible=lowerOffers(cached.offers,Math.round(Number(item.price)*100));if(eligible.length)quotes[itemKey(item)]=Math.min(...eligible.map(o=>o.price));else delete quotes[itemKey(item)];
   await saveUI();
- }catch{notify('Price search is unavailable. Try again shortly.');}finally{searching=false;render();}
+ }catch(e){if(e.code==='session_changed')return;notify('Price search is unavailable. Try again shortly.');}finally{if(epoch!==authEpoch)return;searching=false;render();}
 }
 async function primary(){
- if(!draft||operation)return;
+ if(!authUser||!draft||operation)return;const epoch=authEpoch;
  if(active(current)&&!sameCommitment()){draft=normalize({source:'Shopping cart',items:current.items});index=0;confirming=false;notify();render();saveUI();return;}
  if(active(current)){operation=true;notify();render();await syncState();operation=false;render();return;}
  if(!confirming){confirming=true;notify();render();return;}
  if(!$('consent').checked)return;
  const delivery=new Date();delivery.setDate(delivery.getDate()+7);
  const body={items:draft.items.map(({image,...x})=>x),hours,sellers:'Authorized retailers only',deliveryDate:delivery.toISOString().slice(0,10),consent:true,publish:true};
- operation=true;notify();render();try{await saveUI();const result=await request('/api/card-flow',body);cardFlow=result.flow;savedCards=[];cardView='loading';$('nativePayment').hidden=true;$('savedCardView').hidden=false;$('savedCardDetails').hidden=true;$('cardsLoading').hidden=false;$('cardMessage').textContent='';const amount=money(draft.items.reduce((sum,x)=>sum+Math.round(Number(x.price)*100)*x.quantity,0));$('useSavedCard').textContent='Authorize '+amount+' hold →';$('cardEntry').hidden=false;loadSavedCards(cardFlow);}catch(e){notify(e.name==='TimeoutError'?'Hold status is pending. Refresh before trying again.':e.message);await syncState();}finally{operation=false;render();}
+ operation=true;notify();render();try{await saveUI();if(epoch!==authEpoch)return;const result=await request('/api/card-flow',body);cardFlow=result.flow;savedCards=[];cardView='loading';$('nativePayment').hidden=true;$('savedCardView').hidden=false;$('savedCardDetails').hidden=true;$('cardsLoading').hidden=false;$('cardMessage').textContent='';const amount=money(draft.items.reduce((sum,x)=>sum+Math.round(Number(x.price)*100)*x.quantity,0));$('useSavedCard').textContent='Authorize '+amount+' hold →';$('cardEntry').hidden=false;loadSavedCards(cardFlow);}catch(e){if(e.code==='session_changed')return;notify(e.name==='TimeoutError'?'Hold status is pending. Refresh before trying again.':e.message);await syncState();}finally{if(epoch!==authEpoch)return;operation=false;render();}
 }
-async function releaseHold(){if(!current||operation)return;operation=true;notify();render();try{await request('/api/release',{id:current.id});current=null;await chrome.storage.session.set({laterState:null});await syncState();}catch{notify('Could not confirm release. Refresh before retrying.');}finally{operation=false;render();}}
-async function chooseOffer(offerId){if(!current||operation)return;operation=true;render();try{const result=await request('/api/select',{intentId:current.id,offerId,approved:true});current=result.cart;await chrome.storage.session.set({laterState:current});}catch{notify('This offer is unavailable. Refresh to check again.');}finally{operation=false;render();}}
+async function releaseHold(){if(!authUser||!current||operation)return;const epoch=authEpoch;operation=true;notify();render();try{await request('/api/release',{id:current.id});current=null;await chrome.storage.session.set({[cacheKey('laterState')]:null});await syncState();}catch(e){if(e.code==='session_changed')return;notify('Could not confirm release. Refresh before retrying.');}finally{if(epoch!==authEpoch)return;operation=false;render();}}
+async function chooseOffer(offerId){if(!authUser||!current||operation)return;const epoch=authEpoch;operation=true;render();try{const result=await request('/api/select',{intentId:current.id,offerId,approved:true});current=result.cart;await chrome.storage.session.set({[cacheKey('laterState')]:current});}catch(e){if(e.code==='session_changed')return;notify('This offer is unavailable. Refresh to check again.');}finally{if(epoch!==authEpoch)return;operation=false;render();}}
 let cardFlow=null,savedCards=[],cardView='new';
 function closeCard(){cardFlow=null;savedCards=[];cardView='new';$('cardEntry').hidden=true;$('nativePayment').reset();for(const id of ['enteredCardNumber','enteredCardMonth','enteredCardYear','enteredCardCvv'])$(id).value='';$('savedCardView').hidden=true;$('cardMessage').textContent='';}
 function showNewCard(){cardView='new';$('savedCardView').hidden=true;$('nativePayment').hidden=false;$('enteredCardNumber').value='4111 1111 1111 1111';$('enteredCardMonth').value=DEMO_CARD.expirationMonth;$('enteredCardYear').value=DEMO_CARD.expirationYear;$('enteredCardCvv').value=DEMO_CARD.securityCode;$('cardMessage').textContent='';}
@@ -135,21 +182,21 @@ async function loadSavedCards(flow){
 $('savedCardChoice').onchange=()=>renderSavedCards($('savedCardChoice').value);
 $('useAnotherCard').onclick=()=>{if(!operation)showNewCard();};
 $('removeSavedCard').onclick=async()=>{
- if(operation||!cardFlow)return;const id=$('savedCardChoice').value;operation=true;$('removeSavedCard').disabled=true;$('useSavedCard').disabled=true;$('useAnotherCard').disabled=true;$('closeCard').disabled=true;$('cardMessage').textContent='';
+ if(operation||!cardFlow)return;const epoch=authEpoch,id=$('savedCardChoice').value;operation=true;$('removeSavedCard').disabled=true;$('useSavedCard').disabled=true;$('useAnotherCard').disabled=true;$('closeCard').disabled=true;$('cardMessage').textContent='';
  try{const data=await request('/api/cards/delete',{id});savedCards=Array.isArray(data.cards)?data.cards:[];}
- catch(e){$('cardMessage').textContent=e.message;}
- finally{operation=false;$('removeSavedCard').disabled=false;$('useSavedCard').disabled=false;$('useAnotherCard').disabled=false;$('closeCard').disabled=false;renderSavedCards();}
+ catch(e){if(e.code==='session_changed')return;$('cardMessage').textContent=e.message;}
+ finally{if(epoch!==authEpoch)return;operation=false;$('removeSavedCard').disabled=false;$('useSavedCard').disabled=false;$('useAnotherCard').disabled=false;$('closeCard').disabled=false;if(authUser&&cardFlow)renderSavedCards();}
 };
 $('useSavedCard').onclick=async()=>{
- if(operation||!cardFlow||!savedCards.some(card=>card.id===$('savedCardChoice').value))return;
+ if(operation||!cardFlow||!savedCards.some(card=>card.id===$('savedCardChoice').value))return;const epoch=authEpoch;
  operation=true;$('useSavedCard').disabled=true;$('removeSavedCard').disabled=true;$('useAnotherCard').disabled=true;$('savedCardChoice').disabled=true;$('closeCard').disabled=true;$('cardMessage').textContent='Authorizing…';
  try{const result=await request('/api/commit-saved-card',{flow:cardFlow,cardId:$('savedCardChoice').value});current=result.cart;confirming=false;closeCard();await syncState();if(!result.cart.verification?.active)notify('Check your hold before trying again.');}
- catch(e){$('cardMessage').textContent=e.name==='TimeoutError'?'Hold status is pending. Go back and refresh before trying again.':e.message;await syncState();}
- finally{operation=false;$('useSavedCard').disabled=false;$('removeSavedCard').disabled=false;$('useAnotherCard').disabled=false;$('savedCardChoice').disabled=false;$('closeCard').disabled=false;render();}
+ catch(e){if(e.code==='session_changed')return;$('cardMessage').textContent=e.name==='TimeoutError'?'Hold status is pending. Go back and refresh before trying again.':e.message;await syncState();}
+ finally{if(epoch!==authEpoch)return;operation=false;$('useSavedCard').disabled=false;$('removeSavedCard').disabled=false;$('useAnotherCard').disabled=false;$('savedCardChoice').disabled=false;$('closeCard').disabled=false;render();}
 };
 $('closeCard').onclick=()=>{if(operation)return;closeCard();syncState();};
 $('nativePayment').onsubmit=async event=>{
- event.preventDefault();if(operation||!cardFlow)return;
+ event.preventDefault();if(operation||!cardFlow)return;const epoch=authEpoch;
  operation=true;$('addCard').disabled=true;$('closeCard').disabled=true;$('cardMessage').textContent='Adding card…';
  try{
   const card={number:$('enteredCardNumber').value.replace(/\s/g,''),expirationMonth:$('enteredCardMonth').value.padStart(2,'0'),expirationYear:$('enteredCardYear').value,securityCode:$('enteredCardCvv').value};
@@ -159,20 +206,54 @@ $('nativePayment').onsubmit=async event=>{
   if(!savedCards.length)throw new Error('Could not load this card. Try again.');
   $('nativePayment').reset();for(const id of ['enteredCardNumber','enteredCardMonth','enteredCardYear','enteredCardCvv'])$(id).value='';
   cardView='saved';$('nativePayment').hidden=true;$('savedCardView').hidden=false;$('cardMessage').textContent='';renderSavedCards(result.card?.id);
- }catch(e){$('cardMessage').textContent=e.name==='TimeoutError'?'Could not confirm the card was added. Try again.':e.message;}
- finally{operation=false;$('addCard').disabled=false;$('closeCard').disabled=false;render();}
+ }catch(e){if(e.code==='session_changed')return;$('cardMessage').textContent=e.name==='TimeoutError'?'Could not confirm the card was added. Try again.':e.message;}
+ finally{if(epoch!==authEpoch)return;operation=false;$('addCard').disabled=false;$('closeCard').disabled=false;render();}
 };
 $('productImage').onload=()=>{$('productImage').hidden=false;$('imageFallback').hidden=true;};$('productImage').onerror=()=>{$('productImage').hidden=true;$('imageFallback').hidden=false;};
 $('reviewHistory').onclick=()=>{historyOpen=true;historyPage=0;notify();render();syncState();};$('historyBack').onclick=()=>{if(viewingHistory){viewingHistory=false;historyOpen=true;pageMode='home';}else historyOpen=false;notify();render();};$('historyPrevious').onclick=()=>{historyPage--;renderHistory();};$('historyNext').onclick=()=>{historyPage++;renderHistory();};
 $('read').onclick=readPage;$('retry').onclick=readPage;$('compare').onclick=compare;$('primary').onclick=primary;$('release').onclick=releaseHold;$('back').onclick=()=>{confirming=false;render();};$('consent').onchange=render;
 $('previous').onclick=()=>{index--;notify();render();};$('next').onclick=()=>{index++;notify();render();};
 document.querySelectorAll('[data-hours]').forEach(button=>button.onclick=()=>{hours=Number(button.dataset.hours);render();saveUI();});
-chrome.storage.onChanged.addListener((changes,area)=>{if(area==='session'&&changes.laterCart?.newValue?.tabId===activeTabId)acceptImport(changes.laterCart.newValue,{fromPage:true});});
-async function boot(){
- try{const saved=await chrome.storage.session.get(['laterUI','laterCart','laterState','laterHistory']);const ui=saved.laterUI;historyCarts=saved.laterHistory||[];
+$('authToggle').onclick=()=>{setAuthMode(authMode==='signup'?'login':'signup');notify();};
+$('authForm').onsubmit=async event=>{
+ event.preventDefault();if(authBusy)return;authBusy=true;$('authSubmit').disabled=true;notify();
+ try{
+  const body={email:$('authEmail').value,password:$('authPassword').value};
+  const result=await request(authMode==='signup'?'/api/auth/signup':'/api/auth/login',body,{auth:false});
+  await saveSession(result.token,result.user);$('authPassword').value='';await startApp();
+ }catch(e){notify(e.message==='Failed to fetch'?'Cannot reach the local app. Keep npm start running, then try again.':(e.message||'Could not sign in.'));}finally{authBusy=false;$('authSubmit').disabled=false;}
+};
+$('logout').onclick=async()=>{
+ const logout=sessionToken?request('/api/auth/logout',{}).catch(()=>{}):Promise.resolve();
+ await clearSession();showAuth();notify('Signed out.');await logout;
+};
+chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes.laterAuth){if((changes.laterAuth.newValue?.token||'')!==sessionToken){authEpoch++;sessionToken='';authUser=null;resetAccountState();showAuth('Account changed. Reopen Later.');}return;}if(authUser&&area==='session'&&changes.laterCart?.newValue?.tabId===activeTabId)acceptImport(changes.laterCart.newValue,{fromPage:true});});
+async function startApp(){
+ if(!authUser)return;const epoch=authEpoch,owner=authUser.id;
+ try{
+  const cached=await chrome.storage.session.get(null);if(epoch!==authEpoch)return;
+  if(cached.laterCacheOwner!==owner){await clearAccountCache();if(epoch!==authEpoch)return;}
+  else{const legacy=Object.keys(cached).filter(key=>['laterUI','laterState','laterHistory'].includes(key));if(legacy.length)await chrome.storage.session.remove(legacy);}
+  await chrome.storage.session.set({laterCacheOwner:owner});if(epoch!==authEpoch)return;
+  showAppShell();const saved=await chrome.storage.session.get([cacheKey('laterUI',owner),cacheKey('laterState',owner),cacheKey('laterHistory',owner)]);if(epoch!==authEpoch)return;
+  const ui=saved[cacheKey('laterUI',owner)],state=saved[cacheKey('laterState',owner)];historyCarts=saved[cacheKey('laterHistory',owner)]||[];
   if(ui?.draft&&!draft){draft=normalize(ui.draft);hours=[.25,1,12].includes(ui.hours)?ui.hours:1;lastImport=ui.lastImport||0;searchCache=ui.searchCache||{};quotes={};for(const item of draft.items){const cache=searchCache[queryFor(item).toLowerCase()];if(cache&&Date.now()-cache.at<3600000){const lower=lowerOffers(cache.offers,Math.round(Number(item.price)*100));if(lower.length)quotes[itemKey(item)]=Math.min(...lower.map(x=>x.price));}}}
-  if(active(saved.laterState)){current=saved.laterState;if(!draft)draft=normalize({items:current.items});}
-  render();const check=syncState();await readPage({refreshState:false});const connected=await check;if(!connected)notify('Later is offline. Start the local app, then retry.');else if(!online)notify('Connect Visa in the local app before starting a wait.');
- }catch{pageMode='home';render();notify('Could not load your activity. Try again.');$('app').setAttribute('aria-busy','false');$('emptyMessage').textContent='Open your shopping cart to get started.';}
+  if(active(state)){current=state;if(!draft)draft=normalize({items:current.items});}
+  render();const check=syncState();await readPage({refreshState:false});const connected=await check;if(epoch!==authEpoch)return;if(!connected)notify('Later is offline. Start the local app, then retry.');else if(!online)notify('Connect Visa in the local app before starting a wait.');
+ }catch{if(epoch!==authEpoch)return;pageMode='home';render();notify('Could not load your activity. Try again.');$('app').setAttribute('aria-busy','false');$('emptyMessage').textContent='Open your shopping cart to get started.';}
 }
-boot();setInterval(()=>{if(!document.hidden&&!operation&&!confirming)syncState();},10000);
+
+async function boot(){
+ showAuth();
+ try{
+  const stored=await chrome.storage.local.get('laterAuth');const savedAuth=stored.laterAuth;
+  let status=null;try{status=await request('/api/auth/status',null,{auth:false});}catch{status=null;}
+  if(status&&!status.configured){showAuth('Add MONGODB_URI to outputs/committed-cart/.env, then restart npm start.');return;}
+  if(!status){showAuth('Later is offline. Start the local app (npm start), then reopen this popup.');return;}
+  if(savedAuth?.token){sessionToken=savedAuth.token;
+   try{const me=await request('/api/auth/me');authUser=me.user;await saveSession(sessionToken,authUser);await startApp();return;}
+   catch(e){await clearSession();showAuth(e.code==='auth'?'Sign in to continue.':(e.message||'Could not verify your session. Sign in again.'));return;}}
+  await clearSession();showAuth();
+ }catch{showAuth('Could not load sign-in. Try again.');}
+}
+boot();setInterval(()=>{if(!document.hidden&&authUser&&!operation&&!confirming)syncState();},10000);

@@ -6,6 +6,10 @@ From the workspace: `node outputs/committed-cart/server.mjs`
 From an extracted distribution: `node committed-cart/server.mjs`
 Open http://localhost:4318.
 
+## Shopper sign-in
+
+With `MONGODB_URI` set in `.env`, the web app requires the same email/password account as the Chrome extension before the cart UI opens. Sign up or log in on the landing gate; sessions are stored in `localStorage` and sent as `Authorization: Bearer` to shopper APIs. Use **Log out** in the header to end the session.
+
 ## 1. Purchase intent
 Enter exact items/variants, quantities, all-in unit budgets, acceptable sellers, delivery deadline, and duration. Opt into sharing to the local merchant board. Confirm sandbox authorization. A full Visa Acceptance AUTHORIZED response for the exact amount enables the intent. Product details are user-entered, not independently verified. The optional ../amazon-extension imports selected Amazon.com cart items for review; no Amazon API or checkout integration is implemented.
 
@@ -74,7 +78,9 @@ Official references: [Create a TMS payment instrument](https://developer.visaacc
 Later includes SVG/PNG favicon, Apple touch icon, web manifest, theme color, description and Open Graph/Twitter preview tags. The local prototype is noindex. Social image URLs currently point to localhost; replace them with the public origin when deploying. External social crawlers cannot access localhost. No offline payment caching or service worker is installed.
 
 ## Live price comparison
-SerpApi Google Shopping is connected through the backend-only `SERPAPI_API_KEY` in committed-cart/.env. No key is sent to the browser or included in downloads. Click Find current prices to search one selected item. Only product search text is sent, never card/account details. Results cache for one hour; identical in-flight requests are deduplicated; local uncached calls are limited to 20/hour. Provider account limits still apply.
+SerpApi Google Shopping is connected through the backend-only `SERPAPI_API_KEY` in committed-cart/.env. No key is sent to the browser or included in downloads. Click Check prices to search one selected item. Only product search text is sent, never card/account details. Results cache for one hour; identical in-flight requests are deduplicated; local uncached calls are limited to 20/hour. Provider account limits still apply.
+
+Find other sellers calls Gemini with Google Search grounding through the backend-only `GEMINI_API_KEY` in the same `.env`. The optional `GEMINI_MODEL` defaults to `gemini-3.8-flash`. The key stays on the server. The panel lists other sites and the USD price Gemini found for the selected product. Those listings do not change the cart budget or the Visa hold. The same one-hour cache, in-flight deduplication, and 20-request local hourly cap apply separately from SerpApi.
 
 Results require a recognized store name, matching brand/product anchor, exact model tokens and stated numerical/color/specification constraints, and at least 85% substantive word coverage. This is conservative text matching, not independent verification of product or merchant. Missing/mismatched variants are excluded; no match is a valid outcome. Installments and explicit used/refurbished listings are excluded. Delivery/tax may be incomplete; listing price differences are not guaranteed checkout savings. Searches edited away from the cart’s default query do not show a budget comparison.
 
