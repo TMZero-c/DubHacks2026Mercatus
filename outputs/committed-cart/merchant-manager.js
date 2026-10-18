@@ -48,7 +48,7 @@ $('#connectAgent').onclick=async()=>{$('#agentDialog').showModal();$('#agentPaym
 $('#copyMcpConfig').onclick=async()=>{try{await navigator.clipboard.writeText(lastConfig);$('#copyMcpConfig').textContent='Copied';}catch{$('#copyMcpConfig').textContent='Select and copy the configuration above';}};
 $('#refreshMerchant').onclick=()=>window.refreshMerchantManager();$('#campaignSearch').oninput=render;$('#campaignFilter').onchange=render;
 document.querySelectorAll('[data-m-view]').forEach(b=>b.onclick=()=>{selectedView=b.dataset.mView;$('#campaignSearch').value='';$('#campaignSearch').placeholder=selectedView==='catalog'?'Search products':'Search campaigns';document.querySelectorAll('[data-m-view]').forEach(t=>{t.classList.toggle('active',t===b);t.setAttribute('aria-selected',String(t===b));});render();});
-if(window.LATER_HOSTED)window.refreshMerchantManager();else if(location.hash==='#merchant')$('#merchantTab').click();
+if(window.LATER_HOSTED)window.refreshMerchantManager();else if(!document.body.classList.contains('auth-locked'))window.refreshMerchantManager();
 setInterval(()=>{if($('#merchantView').style.display!=='none'&&!document.querySelector('dialog[open]'))window.refreshMerchantManager();},4000);
 
 // Shareable deal collections use the same backend as the extension and MCP.

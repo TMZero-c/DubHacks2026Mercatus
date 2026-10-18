@@ -1,0 +1,313 @@
+/* Mercatus popup design tokens — EXTENSION COPY.
+   Keep in sync with outputs/shared/tokens.css (source of truth).
+   Only @font-face urls differ here (point at assets/fonts/ inside the extension).
+   Fonts: local Nunito woff2 (MV3 — no remote font URLs). */
+
+/* -------------------------------------------------------------------------- */
+/* @font-face — Nunito (latin + latin-ext)                                    */
+/* -------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-400.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-400-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-500.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-500-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-600.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-600-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-700.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-700-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-800.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-800-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-900.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url("../assets/fonts/nunito-900-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Design tokens                                                              */
+/* -------------------------------------------------------------------------- */
+
+:root {
+  /* —— Colors: core —— */
+  --color-ink: #17201f;
+  --color-muted: #6f746e;
+  --color-paper: #fffdf9;
+  --color-cream: #f7f1e7;
+  --color-line: #ded9cf;
+  --color-blue: #2864e8;
+  --color-blue-hover: #1d54cd;
+  --color-blue-border: #2058d5;
+  --color-green: #168461;
+  --color-green-bright: #35c99a;
+  --color-green-live: #2ab084;
+  --color-danger: #a44b46;
+  --color-visa: #1434cb;
+  --color-star: #e89e18;
+  --color-white: #ffffff;
+
+  /* —— Colors: bag / mascot accents —— */
+  --color-bag-red: #ff5c4d;
+  --color-bag-yellow: #ffca3a;
+  --color-bag-pink: #ff78b7;
+  --color-bag-blue: #3997f0;
+  --color-bag-green: #35c99a;
+  --color-bag-purple: #8f6eea;
+  --color-blush: #df408b;
+
+  /* —— Colors: surfaces & UI chrome —— */
+  --color-header-border: #ebe7df;
+  --color-progress-track: #eeece7;
+  --color-segment-track: #e7ecf7;
+  --color-toggle-track: #efede8;
+  --color-savings-bg: #f4f7fe;
+  --color-savings-border: #d5dff6;
+  --color-notice-bg: #f3f7ff;
+  --color-notice-border: #cddbf9;
+  --color-notice-icon-bg: #dce6fc;
+  --color-success-soft-bg: #effaf6;
+  --color-success-soft-border: #bee1d5;
+  --color-success-icon-bg: #d8f2e9;
+  --color-offer-best-border: #75bfa4;
+  --color-offer-action-bg: #f7f9fe;
+  --color-offer-action-border: #d4d9e6;
+  --color-offer-action-text: #2857bb;
+  --color-save-badge-bg: #e9f8f2;
+  --color-input-border: #c9c5bd;
+  --color-secondary-border: #d8d4cb;
+  --color-secondary-hover-bg: #f7f4ee;
+  --color-icon-hover-bg: #f0ede7;
+  --color-thumb-bg: #eceff3;
+  --color-pay-visa-bg: #eef1ff;
+  --color-overline: #7d766a;
+  --color-hint: #777a76;
+  --color-footer-muted: #737773;
+
+  /* —— Font families —— */
+  --font-sans: "Nunito", sans-serif;
+
+  /* —— Font weights —— */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --font-weight-black: 900;
+
+  /* —— Font sizes (popup scale) —— */
+  --font-size-2xs: 7px;
+  --font-size-xs: 8px;
+  --font-size-sm: 9px;
+  --font-size-md: 10px;
+  --font-size-base: 11px;
+  --font-size-lg: 12px;
+  --font-size-xl: 13px;
+  --font-size-2xl: 15px;
+  --font-size-3xl: 16px;
+  --font-size-4xl: 19px;
+  --font-size-5xl: 21px;
+  --font-size-6xl: 23px;
+  --font-size-7xl: 27px;
+  --font-size-8xl: 28px;
+  --font-size-9xl: 29px;
+  --font-size-display: 34px;
+  --font-size-wordmark: 19px;
+  --font-size-button: 12px;
+  --font-size-body: 12px;
+  --font-size-overline: 10px;
+  --font-size-heading: 23px;
+  --font-size-heading-sm: 21px;
+  --font-size-price: 29px;
+  --font-size-countdown: 34px;
+
+  /* —— Letter spacing —— */
+  --tracking-tight: -0.06em;
+  --tracking-heading: -0.04em;
+  --tracking-wordmark: -0.055em;
+  --tracking-overline: 0.13em;
+  --tracking-label: 0.08em;
+  --tracking-wide: 0.1em;
+
+  /* —— Line heights —— */
+  --leading-tight: 1.08;
+  --leading-snug: 1.15;
+  --leading-normal: 1.45;
+  --leading-relaxed: 1.55;
+
+  /* —— Spacing —— */
+  --space-1: 3px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 13px;
+  --space-8: 14px;
+  --space-9: 15px;
+  --space-10: 16px;
+  --space-11: 17px;
+  --space-12: 18px;
+  --space-13: 20px;
+  --space-14: 22px;
+  --space-15: 24px;
+  --space-16: 28px;
+  --space-17: 32px;
+
+  /* —— Layout (popup chrome) —— */
+  --popup-width: 380px;
+  --popup-height: 600px;
+  --popup-header-min-height: 57px;
+  --popup-padding-x: 22px;
+  --popup-padding-y: 22px;
+  --popup-footer-padding: 13px 18px 17px;
+  --progress-height: 3px;
+  --button-min-height: 43px;
+  --input-height: 55px;
+  --bag-size: 65px;
+  --bag-size-lg: 86px;
+  --bag-size-xl: 100px;
+  --bag-size-sm: 34px;
+
+  /* —— Border radius —— */
+  --radius-xs: 4px;
+  --radius-sm: 7px;
+  --radius-md: 8px;
+  --radius-lg: 9px;
+  --radius-xl: 10px;
+  --radius-2xl: 11px;
+  --radius-3xl: 12px;
+  --radius-4xl: 14px;
+  --radius-popup: 18px;
+  --radius-pill: 999px;
+
+  /* —— Shadows —— */
+  --shadow-popup: 0 18px 45px rgba(49, 42, 31, 0.1);
+  --shadow-popup-active: 0 22px 54px rgba(40, 100, 232, 0.16);
+  --shadow-button: 0 4px 10px rgba(40, 100, 232, 0.2);
+  --shadow-button-hover: 0 6px 14px rgba(40, 100, 232, 0.27);
+  --shadow-segment: 0 1px 4px rgba(46, 57, 78, 0.14);
+  --shadow-toggle: 0 1px 4px rgba(30, 30, 30, 0.1);
+  --shadow-offer-best: 0 4px 14px rgba(28, 133, 95, 0.09);
+  --shadow-focus-ring: 0 0 0 3px rgba(40, 100, 232, 0.12);
+  --shadow-live-dot: 0 0 0 4px rgba(42, 176, 132, 0.12);
+  --shadow-active-step: 0 0 0 4px rgba(40, 100, 232, 0.1);
+
+  /* —— Borders —— */
+  --border-width: 1px;
+  --border-default: var(--border-width) solid var(--color-line);
+  --border-header: var(--border-width) solid var(--color-header-border);
+
+  /* —— Transitions —— */
+  --ease-default: ease;
+  --duration-fast: 0.12s;
+  --duration-base: 0.18s;
+  --duration-slow: 0.2s;
+  --duration-progress: 0.3s;
+  --transition-fast: var(--duration-fast) var(--ease-default);
+  --transition-base: var(--duration-base) var(--ease-default);
+  --transition-slow: var(--duration-slow) var(--ease-default);
+  --transition-button:
+    transform var(--duration-fast) var(--ease-default),
+    background var(--duration-base) var(--ease-default),
+    box-shadow var(--duration-base) var(--ease-default);
+  --transition-popup:
+    box-shadow var(--duration-slow) var(--ease-default),
+    border-color var(--duration-slow) var(--ease-default),
+    transform var(--duration-slow) var(--ease-default);
+
+  /* —— Motion (reference timings from design) —— */
+  --motion-wave: 1.8s ease-in-out infinite;
+  --motion-bob: 2.2s ease-in-out infinite;
+  --motion-success: 1.5s cubic-bezier(0.3, 0.9, 0.35, 1.2) infinite;
+}

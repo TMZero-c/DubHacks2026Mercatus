@@ -2,12 +2,12 @@
   "id": "/",
   "name": "Mercatus",
   "short_name": "Mercatus",
-  "description": "Review your cart and compare merchant offers.",
+  "description": "Name your price and let merchants compete for your cart.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "theme_color": "#2456f5",
-  "background_color": "#f7f8fc",
+  "theme_color": "#2864e8",
+  "background_color": "#f7f1e7",
   "lang": "en",
   "icons": [
     {
