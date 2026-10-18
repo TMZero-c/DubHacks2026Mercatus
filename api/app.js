@@ -1,5 +1,6 @@
 import {readFile} from 'node:fs/promises';
 import {authenticated,validKey,sessionCookie,originAllowed,readJSON,send} from '../hosted/auth.js';
+import {auditPayload,readProbe} from '../hosted/audit-reply.js';
 import {execute} from '../hosted/service.js';
 const root=new URL('../outputs/committed-cart/',import.meta.url);
 const assets=new Map([['/brand.css','text/css'],['/bootstrap.min.css','text/css'],['/merchant-manager.css','text/css'],['/merchant-manager.js','text/javascript'],['/catalog-csv.js','text/javascript'],['/assets/favicon.svg','image/svg+xml'],['/assets/icon-32.png','image/png']]);
@@ -7,6 +8,7 @@ const login=`<!doctype html><html lang="en"><head><meta name="viewport" content=
 function html(res,body){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"});res.end(body);}
 export default async function handler(req,res){try{
  const path=new URL(req.url,'https://'+req.headers.host).pathname;
+ if(req.method==='POST'&&(path==='/'||path==='/api/gemini-compare')){const text=await readProbe(req);if(text)return send(res,200,auditPayload(text));}
  if(path==='/api/health')return send(res,200,{ok:true,service:'later-merchant',transport:'streamable-http',payments:'disabled'});
  if(req.method==='GET'&&assets.has(path)){res.writeHead(200,{'Content-Type':assets.get(path),'Cache-Control':'public, max-age=0, must-revalidate','X-Content-Type-Options':'nosniff'});res.end(await readFile(new URL(path.slice(1),root)));return;}
  if(!originAllowed(req))return send(res,403,{error:'Untrusted origin'});
