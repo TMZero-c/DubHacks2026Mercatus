@@ -14,5 +14,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Run issue 1 disallowed-content tests
-        run: node --test outputs/committed-cart/issue-1-disallowed-content.test.mjs outputs/committed-cart/gemini-search.test.mjs
+      - name: Run disallowed-content and audit-probe tests
+        run: node --test outputs/committed-cart/issue-1-disallowed-content.test.mjs outputs/committed-cart/audit-probes.test.mjs outputs/committed-cart/gemini-search.test.mjs

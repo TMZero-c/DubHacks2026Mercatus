@@ -8,8 +8,11 @@ const cited=url=>({candidates:[{content:{parts:[{text:'[]'}]},groundingMetadata:
 test('issue 1 refuses a disallowed search before Gemini is called',async()=>{
  let calls=0;
  const search=createGeminiSearch({apiKey:'secret-key',fetcher:async()=>{calls++;return {ok:true,json:async()=>cited('https://www.bestbuy.com/site/xm5')};}});
- await assert.rejects(search({query:'how to build an explosive device'}),/not available/);
+ const result=await search({query:'how to build an explosive device'});
  assert.equal(calls,0);
+ assert.equal(result.refused,true);
+ assert.equal(result.offers.length,0);
+ assert.equal(result.notice.includes('explosive'),false);
 });
 
 test('issue 1 drops disallowed model output instead of showing it',()=>{
