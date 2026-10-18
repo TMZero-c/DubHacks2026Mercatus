@@ -1,16 +1,28 @@
 import {store} from './store.js';
 import {createCampaign,updateCampaign,previewCampaign,runAgent,merchantSnapshot,reconcile} from '../outputs/committed-cart/merchant-engine.mjs';
-import {validateCart,verify} from '../outputs/committed-cart/engine.mjs';
+import {verify} from '../outputs/committed-cart/engine.mjs';
 import {merchantTools} from '../outputs/committed-cart/merchant-tools.mjs';
-export const hostedTools=[...merchantTools.map(t=>({...t,description:t.name==='merchant_run'?'Process active campaigns now. The hosted worker also runs when a test cart arrives or a campaign is activated; duplicates and pricing/stock limits are enforced.':t.description.replace('sandbox-backed','synthetic test'),...(t.name==='merchant_create_campaign'?{inputSchema:{...t.inputSchema,required:[...t.inputSchema.required,'requestId']}}:{})})),{name:'merchant_add_test_intent',description:'Add a clearly synthetic committed-cart fixture to this hosted demo so you can test matching and automatic offers. Makes no Visa request and reserves no real funds.',inputSchema:{type:'object',properties:{requestId:{type:'string'},items:{type:'array',items:{type:'object',properties:{name:{type:'string'},variant:{type:'string'},price:{type:'string'},quantity:{type:'integer'}},required:['name','variant','price','quantity'],additionalProperties:false},minItems:1,maxItems:8},sellers:{type:'string'}},required:['items','requestId'],additionalProperties:false},annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:true}}];
-const idempotency=(body)=>{if(!body.requestId||typeof body.requestId!=='string'||body.requestId.length>100)throw new Error('Supply requestId (1–100 characters) for safe retries.');};
+export const hostedTools=merchantTools.map(t=>({...t,description:t.name==='merchant_run'?'Process active campaigns against confirmed Visa sandbox intents. Duplicates and pricing/stock limits are enforced.':t.description,...(t.name==='merchant_create_campaign'?{inputSchema:{...t.inputSchema,required:[...t.inputSchema.required,'requestId']}}:{})}));
+const idempotency=body=>{if(!body.requestId||typeof body.requestId!=='string'||body.requestId.length>100)throw new Error('Supply requestId (1–100 characters) for safe retries.');};
+// Legacy fixtures remain stored for audit, but cannot participate in the live workspace.
+function workspace(data){
+ const carts=Object.fromEntries(Object.entries(data.carts).filter(([,c])=>c.synthetic!==true&&c.environment==='visa-acceptance-sandbox'&&/^\d{1,60}$/.test(c.authorizationId||'')&&c.authorizedAmount===c.amount));
+ const campaigns=data.merchant.campaigns.filter(c=>!c.requestId?.startsWith('smoke-campaign-'));
+ const campaignIds=new Set(campaigns.map(c=>c.id));
+ return{carts,merchant:{...data.merchant,campaigns,decisions:data.merchant.decisions.filter(d=>carts[d.intentId]&&campaignIds.has(d.campaignId))}};
+}
+function processLive(data,live){
+ const known=new Set(data.merchant.decisions.map(d=>d.id));
+ const result=runAgent(live.merchant,live.carts);
+ data.merchant.decisions.push(...live.merchant.decisions.filter(d=>!known.has(d.id)));
+ return result;
+}
 export async function execute(name,body={},db=store){
- if(name==='merchant_overview'){const {data}=await db.read();reconcile(data.merchant,data.carts);return merchantSnapshot(data.merchant,data.carts);}
- if(name==='merchant_run')return db.transaction(data=>({submitted:runAgent(data.merchant,data.carts).submitted}));
- if(name==='merchant_intents'){const {data}=await db.read();return{intents:Object.values(data.carts).filter(c=>verify(c).acceptingOffers).map(c=>({id:c.id,items:c.items,amount:c.amount,sellers:c.sellers,deliveryDate:c.deliveryDate,expiresAt:c.expiresAt,digest:c.digest,intentSource:'synthetic-demo',verification:verify(c)}))};}
- if(name==='merchant_preview'){const {data}=await db.read();return previewCampaign(data.merchant,body,data.carts);}
+ if(name==='merchant_overview'){const {data}=await db.read();const live=workspace(data);reconcile(live.merchant,live.carts);return merchantSnapshot(live.merchant,live.carts);}
+ if(name==='merchant_run')return db.transaction(data=>{const live=workspace(data);return{submitted:processLive(data,live).submitted};});
+ if(name==='merchant_intents'){const {data}=await db.read();return{intents:Object.values(workspace(data).carts).filter(c=>verify(c).acceptingOffers).map(c=>({id:c.id,items:c.items,amount:c.amount,sellers:c.sellers,deliveryDate:c.deliveryDate,expiresAt:c.expiresAt,digest:c.digest,intentSource:'visa-acceptance-sandbox',verification:verify(c)}))};}
+ if(name==='merchant_preview'){const {data}=await db.read();const live=workspace(data);return previewCampaign(live.merchant,body,live.carts);}
  if(name==='merchant_create_campaign'){idempotency(body);return db.transaction(data=>({campaign:createCampaign(data.merchant,body)}));}
- if(name==='merchant_update_campaign')return db.transaction(data=>{reconcile(data.merchant,data.carts);const campaign=updateCampaign(data.merchant,body.id,body);const run=runAgent(data.merchant,data.carts);return{campaign,submitted:run.submitted};});
- if(name==='merchant_add_test_intent'){idempotency(body);return db.transaction(data=>{const old=Object.values(data.carts).find(c=>c.requestId===body.requestId);if(old)return{intent:old,created:false};if(Object.keys(data.carts).length>=1000)throw new Error('Hosted demo limit reached (1,000 test carts).');const now=Date.now(),cart=validateCart({items:body.items,hours:12,sellers:body.sellers||'Authorized retailers only',deliveryDate:new Date(now+7*86400000).toISOString().slice(0,10),consent:true,publish:true},now);Object.assign(cart,{status:'authorized',synthetic:true,environment:'synthetic-demo',requestId:body.requestId,offers:[]});data.carts[cart.id]=cart;const run=runAgent(data.merchant,data.carts);return{intent:{...cart,verification:verify(cart)},submitted:run.submitted,created:true};});}
+ if(name==='merchant_update_campaign')return db.transaction(data=>{const live=workspace(data);if(!live.merchant.campaigns.some(c=>c.id===body.id))throw new Error('Unknown campaign.');reconcile(live.merchant,live.carts);const campaign=updateCampaign(live.merchant,body.id,body);return{campaign,submitted:processLive(data,live).submitted};});
  throw new Error('Unknown merchant tool');
 }

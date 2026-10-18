@@ -96,4 +96,4 @@ References: [Meta campaign/ad-set SDK](https://github.com/facebook/facebook-php-
 
 ## Hosted test workspace
 
-A separate authenticated Vercel deployment now exposes Streamable HTTP at https://later-merchant-mcp.vercel.app/mcp. It includes synthetic test carts and no payment endpoints. The local stdio instructions above remain valid. See [HOSTED-MCP.md](../../HOSTED-MCP.md) for the remote client configuration, private access keys, storage and test workflow.
+A separate authenticated Vercel deployment now exposes Streamable HTTP at https://later-merchant-mcp.vercel.app/mcp. It has no synthetic-intent tool or payment endpoints. It is not yet connected to the local Visa-authorized carts. The local stdio instructions above remain valid. See [HOSTED-MCP.md](../../HOSTED-MCP.md) for the remote client configuration, private access keys, storage and test workflow.

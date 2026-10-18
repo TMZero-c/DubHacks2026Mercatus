@@ -22,7 +22,7 @@ function safeImage(value){return safeLink(value);}
 function saveUI(){return chrome.storage.session.set({laterUI:{draft,hours,quotes,searchCache,lastImport}}).catch(()=>{});}
 const queryFor=productQuery;
 async function request(path,body){
- const response=await fetch(API+path,{credentials:'include',cache:'no-store',signal:AbortSignal.timeout(path==='/api/compare'||path==='/api/commit-test-card'?30000:7000),...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
+ const response=await fetch(API+path,{credentials:'include',cache:'no-store',signal:AbortSignal.timeout(path==='/api/compare'||path==='/api/commit-card'?30000:7000),...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
  const data=await response.json();if(!response.ok)throw new Error(data.error||'Please try again.');return data;
 }
 function baseline(){const fresh={};for(const item of draft.items){const cache=searchCache[queryFor(item).toLowerCase()];if(cache&&Date.now()-cache.at<3600000){const offers=lowerOffers(cache.offers,Math.round(Number(item.price)*100));if(offers.length)fresh[itemKey(item)]=Math.min(...offers.map(x=>x.price));}}return cartBaseline(draft.items,fresh);}
@@ -66,9 +66,9 @@ function render(){
   $('release').hidden=current.status!=='authorized';$('release').disabled=operation;
  }
  $('primary').disabled=operation||!online||(confirming&&!$('consent').checked)||(waiting&&current.status!=='authorized');
- $('primary').textContent=operation?'Updating…':confirming?'Authorize test hold →':waiting?(current.selectedOfferId?'Offer selected':'Check offers'):active(current)?'View waiting cart →':'Wait & save →';
+ $('primary').textContent=operation?'Updating…':confirming?'Continue to card →':waiting?(current.selectedOfferId?'Offer selected':'Check offers'):active(current)?'View waiting cart →':'Wait & save →';
  if(waiting&&current.selectedOfferId)$('primary').disabled=true;
- $('paymentHint').textContent=confirming?'Test card ···· 1111':'Test mode';
+ $('paymentHint').textContent=confirming?'Secure card entry':'Sandbox';
 }
 async function acceptImport(cart,{fromPage=false}={}){
  if(!cart||cart.at<=lastImport)return;
@@ -113,10 +113,25 @@ async function primary(){
  if(!$('consent').checked)return;
  const delivery=new Date();delivery.setDate(delivery.getDate()+7);
  const body={items:draft.items.map(({image,...x})=>x),hours,sellers:'Authorized retailers only',deliveryDate:delivery.toISOString().slice(0,10),consent:true,publish:true};
- operation=true;notify();render();try{await saveUI();const result=await request('/api/commit-test-card',{...body,testCard:'visa-1111'});current=result.cart;confirming=false;await chrome.storage.session.set({laterState:current});await syncState();}catch(e){notify(e.name==='TimeoutError'?'Hold status is pending. Refresh before trying again.':e.message);await syncState();}finally{operation=false;render();}
+ operation=true;notify();render();try{await saveUI();const result=await request('/api/card-flow',body);cardFlow=result.flow;billingDetails=null;$('nativeBilling').hidden=false;$('nativePayment').hidden=true;$('cardMessage').textContent='';$('cardAmount').textContent=money(draft.items.reduce((sum,x)=>sum+Math.round(Number(x.price)*100)*x.quantity,0));$('cardEntry').hidden=false;}catch(e){notify(e.name==='TimeoutError'?'Hold status is pending. Refresh before trying again.':e.message);await syncState();}finally{operation=false;render();}
 }
 async function releaseHold(){if(!current||operation)return;operation=true;notify();render();try{await request('/api/release',{id:current.id});current=null;await chrome.storage.session.set({laterState:null});await syncState();}catch{notify('Could not confirm release. Refresh before retrying.');}finally{operation=false;render();}}
 async function chooseOffer(offerId){if(!current||operation)return;operation=true;render();try{const result=await request('/api/select',{intentId:current.id,offerId,approved:true});current=result.cart;await chrome.storage.session.set({laterState:current});}catch{notify('This offer is unavailable. Refresh to check again.');}finally{operation=false;render();}}
+let cardFlow=null,billingDetails=null;
+function closeCard(){cardFlow=null;billingDetails=null;$('cardEntry').hidden=true;$('nativeBilling').reset();$('nativePayment').reset();$('cardMessage').textContent='';}
+$('closeCard').onclick=()=>{if(operation)return;closeCard();syncState();};
+$('nativeBilling').onsubmit=event=>{event.preventDefault();billingDetails=Object.fromEntries(new FormData(event.currentTarget));billingDetails.country=billingDetails.country.toUpperCase();$('nativeBilling').hidden=true;$('nativePayment').hidden=false;};
+$('editNativeBilling').onclick=()=>{if(operation)return;$('nativeBilling').hidden=false;$('nativePayment').hidden=true;};
+$('nativePayment').onsubmit=async event=>{
+ event.preventDefault();if(operation||!cardFlow||!billingDetails)return;
+ operation=true;$('authorizeCard').disabled=true;$('closeCard').disabled=true;$('cardMessage').textContent='Authorizing…';
+ try{
+  const card={number:$('enteredCardNumber').value.replace(/\s/g,''),expirationMonth:$('enteredCardMonth').value.padStart(2,'0'),expirationYear:$('enteredCardYear').value,securityCode:$('enteredCardCvv').value};
+  const result=await request('/api/commit-card',{card,billTo:billingDetails,flow:cardFlow});current=result.cart;confirming=false;closeCard();await syncState();
+  if(!result.cart.verification?.active)notify('Check your hold before trying again.');
+ }catch(e){$('cardMessage').textContent=e.name==='TimeoutError'?'Hold status is pending. Go back and refresh before trying again.':e.message;await syncState();}
+ finally{operation=false;$('authorizeCard').disabled=false;$('closeCard').disabled=false;render();}
+};
 $('productImage').onload=()=>{$('productImage').hidden=false;$('imageFallback').hidden=true;};$('productImage').onerror=()=>{$('productImage').hidden=true;$('imageFallback').hidden=false;};
 $('reviewHistory').onclick=()=>{historyOpen=true;historyPage=0;notify();render();syncState();};$('historyBack').onclick=()=>{if(viewingHistory){viewingHistory=false;historyOpen=true;pageMode='home';}else historyOpen=false;notify();render();};$('historyPrevious').onclick=()=>{historyPage--;renderHistory();};$('historyNext').onclick=()=>{historyPage++;renderHistory();};
 $('read').onclick=readPage;$('retry').onclick=readPage;$('compare').onclick=compare;$('primary').onclick=primary;$('release').onclick=releaseHold;$('back').onclick=()=>{confirming=false;render();};$('consent').onchange=render;

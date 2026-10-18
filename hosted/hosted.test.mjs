@@ -3,14 +3,35 @@ import test from 'node:test';
 import {BlobPreconditionFailedError} from '@vercel/blob';
 import {createStore} from './store.js';
 import {execute,hostedTools} from './service.js';
+import {validateCart,authorize} from '../outputs/committed-cart/engine.mjs';
 import {newMerchantState} from '../outputs/committed-cart/merchant-engine.mjs';
 import {validKey,sessionCookie,authenticated,originAllowed} from './auth.js';
 const campaign={name:'Hosted test',merchant:'Campus Electronics',dailyBudget:'100',maxIncentive:'20',minMarginPct:20,discountPct:15,strategy:'fixed_discount',deliveryDays:2,offerMinutes:60,returns:'30-day returns',sellerRules:['Authorized retailers only'],inventoryAttested:true,requestId:'campaign',products:[{name:'Wireless headphones',variant:'Black',unitPrice:'150',cost:'90',stock:1}]};
-function memory(){let data={merchant:newMerchantState(),carts:{}};return{read:async()=>({data:structuredClone(data)}),transaction:async fn=>{const copy=structuredClone(data);const result=fn(copy);data=copy;return result;}};}
-test('hosted merchant flow, synthetic backing, dedupe, guardrails and read-only tools',async()=>{const db=memory();const c=(await execute('merchant_create_campaign',campaign,db)).campaign;assert.equal(c.status,'paused');assert.equal((await execute('merchant_create_campaign',campaign,db)).campaign.id,c.id);assert.equal((await execute('merchant_update_campaign',{id:c.id,status:'active'},db)).submitted,0);
- const body={requestId:'intent',items:[{name:'Wireless headphones',variant:'Black',price:'150',quantity:1}]};const made=await execute('merchant_add_test_intent',body,db);assert.equal(made.submitted,1);assert.equal(made.intent.verification.environment,'synthetic-demo');assert.equal(made.intent.verification.paymentBacking,'Synthetic test intent; no Visa authorization');assert.equal((await execute('merchant_add_test_intent',body,db)).created,false);assert.equal((await execute('merchant_run',{},db)).submitted,0);const state=await execute('merchant_overview',{},db);assert.equal(state.summary.offers,1);assert.equal((await execute('merchant_intents',{},db)).intents[0].intentSource,'synthetic-demo');assert.equal((await execute('merchant_preview',{campaignId:c.id},db)).eligible,0);assert.equal(hostedTools.length,7);
- await assert.rejects(()=>execute('merchant_create_campaign',{...campaign,requestId:undefined},db),/requestId/);await assert.rejects(()=>execute('capture',{},db),/Unknown/);
+function memory(initial={}){let data={merchant:newMerchantState(),carts:{},...initial};return{read:async()=>({data:structuredClone(data)}),transaction:async fn=>{const copy=structuredClone(data);const result=fn(copy);data=copy;return result;}};}
+test('only confirmed Visa response records qualify; no synthetic tool or fallback',async()=>{
+ const cart=validateCart({items:[{name:'Wireless headphones',variant:'Black',price:'150',quantity:1}],hours:12,sellers:'Authorized retailers only',deliveryDate:new Date(Date.now()+7*86400000).toISOString().slice(0,10),publish:true,consent:true});
+ // Offline fixture injection is confined to this test's memory store, never a runtime tool.
+ await authorize(cart,async()=>({id:'123456',status:'AUTHORIZED',orderInformation:{amountDetails:{authorizedAmount:'150.00'}}}));
+ const fake={...structuredClone(cart),id:'synthetic',synthetic:true};
+ const unconfirmed={...structuredClone(cart),id:'unconfirmed',authorizationId:null};
+ const db=memory({carts:{[cart.id]:cart,fake,unconfirmed}});
+ const c=(await execute('merchant_create_campaign',campaign,db)).campaign;
+ assert.equal(c.status,'paused');assert.equal((await execute('merchant_create_campaign',campaign,db)).campaign.id,c.id);
+ assert.equal((await execute('merchant_update_campaign',{id:c.id,status:'active'},db)).submitted,1);
+ assert.equal((await execute('merchant_run',{},db)).submitted,0);
+ const state=await execute('merchant_overview',{},db);assert.equal(state.summary.offers,1);
+ const intents=(await execute('merchant_intents',{},db)).intents;assert.equal(intents.length,1);assert.equal(intents[0].intentSource,'visa-acceptance-sandbox');assert.equal(intents[0].verification.authorizationId,'123456');
+ assert.equal((await execute('merchant_preview',{campaignId:c.id},db)).eligible,0);assert.equal(hostedTools.length,6);
+ await assert.rejects(()=>execute('merchant_add_test_intent',{},db),/Unknown/);
+ await assert.rejects(()=>execute('merchant_create_campaign',{...campaign,requestId:undefined},db),/requestId/);
 });
+test('legacy simulated offers remain archived and excluded from live metrics',async()=>{
+ const merchant=newMerchantState();const c=createLegacyCampaign(merchant);
+ const db=memory({merchant,carts:{legacy:{id:'legacy',synthetic:true,status:'authorized',published:true,amount:15000,expiresAt:new Date(Date.now()+600000).toISOString()}}});
+ const state=await execute('merchant_overview',{},db);assert.equal(state.campaigns.length,0);assert.equal(state.summary.offers,0);assert.equal((await execute('merchant_intents',{},db)).intents.length,0);assert.equal((await execute('merchant_run',{},db)).submitted,0);
+ assert.equal((await db.read()).data.merchant.decisions.length,1);
+});
+function createLegacyCampaign(merchant){const c={id:'legacy-campaign',requestId:'smoke-campaign-old'};merchant.campaigns.push(c);merchant.decisions.push({id:'legacy-offer',campaignId:c.id,intentId:'legacy',status:'reserved'});return c;}
 test('private storage reads fresh and retries compare-and-swap conflicts',async()=>{let reads=0,writes=0;const db=createStore({get:async(path,options)=>{assert.equal(options.access,'private');assert.equal(options.useCache,false);assert.equal(options.headers['Accept-Encoding'],'identity');reads++;return{statusCode:200,blob:{etag:'etag-'+reads},stream:new Response(JSON.stringify({n:reads})).body};},put:async(path,body,options)=>{writes++;assert.equal(options.access,'private');assert.equal(options.ifMatch,'etag-'+reads);if(writes===1)throw new BlobPreconditionFailedError();assert.equal(JSON.parse(body).n,3);}});assert.equal(await db.transaction(d=>++d.n),3);assert.equal(reads,2);assert.equal(writes,2);});
 test('new private state uses create-only semantics',async()=>{const db=createStore({get:async()=>null,put:async(path,body,options)=>{assert.equal(options.allowOverwrite,false);assert.equal(options.ifMatch,undefined);assert.equal(JSON.parse(body).version,1);}});assert.equal(await db.transaction(d=>d.version),1);});
 test('workspace bearer/cookie auth, expiry and origin checks',()=>{process.env.MERCHANT_ACCESS_KEY='test-'.repeat(16);assert.equal(validKey('wrong'),false);assert.equal(authenticated({headers:{authorization:'Bearer '+process.env.MERCHANT_ACCESS_KEY}}),true);const cookie=sessionCookie().split(';')[0];assert.equal(authenticated({headers:{cookie}}),true);assert.equal(authenticated({headers:{cookie:sessionCookie(Date.now()-2*86400000).split(';')[0]}}),false);assert.equal(originAllowed({headers:{host:'later.vercel.app',origin:'https://evil.example'}}),false);assert.equal(originAllowed({headers:{host:'later.vercel.app',origin:'https://later.vercel.app'}}),true);});

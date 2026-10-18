@@ -19,3 +19,5 @@ const privateCart=create();privateCart.status='authorized';assert.throws(()=>val
 assert.throws(()=>selectOffer(shared,offer.id,Date.parse(offer.expiresAt)+1));selectOffer(shared,offer.id);assert.equal(shared.selectedOfferId,offer.id);assert.throws(()=>selectOffer(shared,offer.id));assert.throws(()=>validateOffer(shared,offerInput));
 shared.selectedOfferId=null;shared.status='released';assert.throws(()=>validateOffer(shared,offerInput));assert.throws(()=>selectOffer(shared,offer.id));
 console.log('PASS: sharing consent, offer budget/deadline/claims validation, snapshot binding, expiry, selection, closed-intent rejection.');
+
+const forged={...create(),status:'authorized',published:true};assert.equal(verify(forged).active,false);const synthetic={...cart,status:'authorized',visaStatus:'AUTHORIZED',synthetic:true};assert.equal(verify(synthetic).active,false);

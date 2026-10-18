@@ -1,7 +1,7 @@
 import {createPublicKey,verify as verifySignature} from 'node:crypto';
 import {signedPost} from '../visa-sandbox/visa.mjs';
-export async function createMicroformSession(config){
- const r=signedPost('/microform/v2/sessions',{targetOrigins:['http://localhost:4318'],clientVersion:'v2.0',allowedCardNetworks:['VISA'],transientTokenResponseOptions:{includeCardPrefix:false}},config);
+export async function createMicroformSession(config,origin='http://localhost:4318'){
+ const r=signedPost('/microform/v2/sessions',{targetOrigins:[origin],clientVersion:'v2.0',allowedCardNetworks:['VISA'],transientTokenResponseOptions:{includeCardPrefix:false}},config);
  const response=await fetch(r.url,r.options);if(!response.ok)throw new Error('Visa hosted card entry unavailable. Check Microform access in your sandbox account.');
  const captureContext=await response.text();const payload=JSON.parse(Buffer.from(captureContext.split('.')[1],'base64url'));const data=payload.ctx?.[0]?.data;
  const library=new URL(data?.clientLibrary);if(library.origin!=='https://testflex.cybersource.com'||!data.clientLibraryIntegrity?.startsWith('sha256-')||!payload.flx?.jwk||payload.exp*1000<=Date.now())throw new Error('Invalid sandbox hosted-fields configuration');

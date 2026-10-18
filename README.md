@@ -27,7 +27,7 @@ If Chrome assigns a different development extension ID, update the exact extensi
 
 ## Merchant campaigns and agents
 
-Create a campaign, import a CSV catalog, set inventory and pricing limits, preview, then activate. The server worker responds automatically every two seconds. New campaigns start paused. Use example in the editor loads fictional sample products; no merchant data or campaign state is included in this repository.
+Create a campaign, import a CSV catalog, set inventory and pricing limits, preview, then activate. The server worker responds automatically every two seconds. New campaigns start paused. Merchant inventory and prices must be entered or imported; no merchant data or campaign state is included in this repository.
 
 The merchant manager includes Campaigns, Catalog, Offers and a Connect an agent panel with local stdio MCP configuration. [Merchant workflow, pricing math and MCP tools](outputs/committed-cart/MERCHANTS.md).
 
@@ -50,4 +50,10 @@ Only blank `.env.example` templates are committed. Visa/SerpAPI keys, `.env` fil
 
 ## Hosted MCP demo
 
-The merchant dashboard and authenticated Streamable HTTP MCP service are available at https://later-merchant-mcp.vercel.app. It uses separate private persistent storage and explicitly synthetic test carts, with no hosted payment endpoints or uploaded Visa credentials. See [hosted setup and testing](HOSTED-MCP.md) for connection, access-key handling, and deployment details.
+The merchant dashboard and authenticated Streamable HTTP MCP service are available at https://later-merchant-mcp.vercel.app. It uses separate private persistent storage. Synthetic intent creation has been removed; only confirmed sandbox authorization records can qualify. No hosted payment endpoints, local cart synchronization, or Visa credentials are configured yet. See [hosted setup and testing](HOSTED-MCP.md) for connection, access-key handling, and deployment details.
+
+## Devpost and demo wording
+
+“Today, Later verifies purchase intent with a real Visa Acceptance sandbox authorization and lets merchants compete for the cart. Next, Visa Intelligent Commerce could let shoppers authenticate a purchase instruction with a budget and deadline, so Later can complete checkout when a qualifying offer arrives.”
+
+Show the working authorization and offer flow first. Label Intelligent Commerce as the roadmap: access approval, card enrollment, purchase instructions, and merchant checkout are not implemented or verified in this build. Intelligent Commerce provides authenticated instructions, agent-bound credentials and payment controls; it does not create the authorization hold. A shopper’s final purchase still requires approval in the current prototype. Do not show a staged instruction ID or claim an order was placed.

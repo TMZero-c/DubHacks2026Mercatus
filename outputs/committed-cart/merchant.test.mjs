@@ -4,7 +4,7 @@ import {validateCart,selectOffer} from './engine.mjs';
 import {parseCatalogCSV} from './catalog-csv.js';
 const now=Date.now(),date=new Date(now+7*86400000).toISOString().slice(0,10);
 const input=(patch={})=>({name:'Headphone offers',merchant:'Campus Electronics',dailyBudget:'20',maxIncentive:'10',minMarginPct:20,discountPct:20,strategy:'fixed_discount',deliveryDays:2,offerMinutes:60,returns:'30-day free returns',sellerRules:['Authorized retailers only'],inventoryAttested:true,products:[{name:'Sony WH-1000XM4',variant:'Black · New',unitPrice:'150',cost:'90',stock:5}],...patch});
-function cart(patch={}){return{...validateCart({items:[{name:'Sony WH-1000XM4',variant:'Black · New',price:'150',quantity:1}],hours:12,sellers:'Authorized retailers only',deliveryDate:date,publish:true,consent:true},now),status:'authorized',offers:[],...patch};}
+function cart(patch={}){return{...validateCart({items:[{name:'Sony WH-1000XM4',variant:'Black · New',price:'150',quantity:1}],hours:12,sellers:'Authorized retailers only',deliveryDate:date,publish:true,consent:true},now),status:'authorized',visaStatus:'AUTHORIZED',authorizationId:'123',authorizedAmount:15000,offers:[],...patch};}
 function setup(patch={}){const state=newMerchantState(),c=createCampaign(state,input(patch),now);return{state,c};}
 {
  const {state,c}=setup();const a=cart(),carts={[a.id]:a};assert.equal(c.status,'paused');assert.equal(runAgent(state,carts,now).submitted,0);
@@ -44,7 +44,7 @@ function setup(patch={}){const state=newMerchantState(),c=createCampaign(state,i
  const {state,c}=setup();updateCampaign(state,c.id,{status:'active'},now);const a=cart();runAgent(state,{[a.id]:a},now);reconcile(state,{[a.id]:a},now+61*60000);assert.equal(state.decisions[0].status,'released');assert.equal(runAgent(state,{[a.id]:a},now+61*60000).submitted,0); // no repeat bidding on the same intent
 }
 {
- const {state,c}=setup({products:[{name:'Sony WH-1000XM4',variant:'Black · New',unitPrice:'150',cost:'90',stock:3}]});updateCampaign(state,c.id,{status:'active'},now);const a=cart();a.items.push({...a.items[0]});a.amount=30000;assert.equal(runAgent(state,{[a.id]:a},now).submitted,1);assert.equal(state.decisions[0].units.reduce((s,u)=>s+u.quantity,0),2);
+ const {state,c}=setup({products:[{name:'Sony WH-1000XM4',variant:'Black · New',unitPrice:'150',cost:'90',stock:3}]});updateCampaign(state,c.id,{status:'active'},now);const a=cart();a.items.push({...a.items[0]});a.amount=30000;a.authorizedAmount=30000;assert.equal(runAgent(state,{[a.id]:a},now).submitted,1);assert.equal(state.decisions[0].units.reduce((s,u)=>s+u.quantity,0),2);
 }
 {
  const state=newMerchantState();const first=createCampaign(state,input({products:[{name:'Sony WH-1000XM4',variant:'Black · New',unitPrice:'150',cost:'90',stock:1}]}),now);const second=createCampaign(state,input({name:'Second campaign',discountPct:30,products:[{name:'Sony WH-1000XM4',variant:'Black · New',unitPrice:'150',cost:'90',stock:1}]}),now);for(const c of [first,second])updateCampaign(state,c.id,{status:'active'},now);const a=cart(),b=cart();assert.equal(runAgent(state,{[a.id]:a,[b.id]:b},now).submitted,1);assert.equal(state.decisions.length,1); // shared stock across campaigns for one business

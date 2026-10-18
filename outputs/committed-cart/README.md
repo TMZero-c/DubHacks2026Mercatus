@@ -10,14 +10,14 @@ Open http://localhost:4318.
 Enter exact items/variants, quantities, all-in unit budgets, acceptable sellers, delivery deadline, and duration. Opt into sharing to the local merchant board. Confirm sandbox authorization. A full Visa Acceptance AUTHORIZED response for the exact amount enables the intent. Product details are user-entered, not independently verified. The optional ../amazon-extension imports selected Amazon.com cart items for review; no Amazon API or checkout integration is implemented.
 
 ## 2. Merchant campaigns
-Open http://localhost:4318/#merchant. Create a paused campaign, import a catalog once, set pricing/margin, daily incentives, stock and fulfillment constraints, preview matches, then activate. A server-side worker responds to matching open intents automatically every two seconds. Campaign, Catalog and Offers views show delivery and reservation metrics. Use example loads a fictional catalog into the campaign editor; new campaigns start paused.
+Open http://localhost:4318/#merchant. Create a paused campaign, import a catalog once, set pricing/margin, daily incentives, stock and fulfillment constraints, preview matches, then activate. A server-side worker responds to matching open intents automatically every two seconds. Campaign, Catalog and Offers views show delivery and reservation metrics. Enter or import your catalog; new campaigns start paused.
 
 A local stdio MCP bridge lets agents read performance, create/preview campaigns, change rules and activate/pause them using the same guarded API. Click Connect an agent for configuration. No ChatGPT login or external AI provider is required. See [MERCHANTS.md](MERCHANTS.md) for the full workflow, pricing math, API/MCP setup, tests and production scale boundaries.
 
 Merchant identity, inventory and eligibility remain self-declared. The role switch is one shared local demo workspace, not production merchant authentication. Shopper selection does not purchase, capture or settle funds.
 
 ## Payment and privacy boundaries
-Reads sandbox HTTP Signature credentials from ../visa-sandbox/.env on the server. The distribution contains only a blank .env.example. Never distribute the filled .env. Only fixed sandbox test card data is used; no real funds are reserved, no real shopper is authenticated, and this does not establish legally binding or portable purchase intent. The verification API is our local server assertion, not a Visa-signed attestation.
+Reads sandbox HTTP Signature credentials from ../visa-sandbox/.env on the server. The distribution contains only a blank .env.example. Never distribute the filled .env. Cards and billing details are entered explicitly through secure card entry; no real funds are reserved, no real shopper is authenticated, and this does not establish legally binding or portable purchase intent. The verification API is our local server assertion, not a Visa-signed attestation.
 
 Carts and merchant campaigns persist in .local/state.json (Git-ignored); old cart-only state migrates automatically. Session ownership uses an HttpOnly SameSite cookie. Credential values and card data are never returned to browser clients. Shared cart items, budgets, conditions and optional product links are visible to any local demo merchant. Do not enter sensitive links.
 
@@ -30,9 +30,11 @@ Browser-tested: $180 sandbox authorization -> published intent -> $165 merchant 
 
 
 ## Hosted card entry (Microform)
-Open http://localhost:4318 (the exact origin is required). Click Load secure card fields. Use sandbox Visa 4111 1111 1111 1111, security code 123, and a future MM/YYYY expiry. Confirm your cart and consent, then Commit my cart. Release commitment reverses the sandbox authorization.
+Open http://localhost:4318 (the exact origin is required). Enter a cart, confirm consent, then Wait & save. Billing details and sandbox card entry appear in the same dialog. Enter a sandbox card from Visa’s testing guide. Release commitment reverses the sandbox authorization.
 
-Card number/CVV are entered in Visa/Cybersource-hosted iframes, tokenized by Microform, and sent to the server as a short-lived signed token. The server validates the token using the current session key and expiry, consumes its local session once, and sends tokenInformation.transientTokenJwt with capture:false to Visa Acceptance. Tokens and capture sessions are not written to disk or application logs. Fictional billing details remain for sandbox testing. The standalone website supports this hosted entry path. The extension’s default inline confirmation uses a preset sandbox test Visa ending 1111 through /api/commit-test-card; this is not a saved personal card.
+The embedded website and extension flow accepts an explicitly entered sandbox card and billing details, sends them to the loopback server, and forwards Visa’s documented paymentInformation.card and orderInformation.billTo fields to the remote Payments API with capture:false. Card details, CVV and billing data are never persisted or logged. There is no preset-card endpoint or fallback. This direct card entry is sandbox-only and is not a production hosted-fields integration.
+
+The optional standalone Microform path remains available for development: Visa/Cybersource-hosted fields return a short-lived RS256 token, which the server validates and consumes once before sending tokenInformation.transientTokenJwt. Visa rejected chrome-extension origins in its Microform capture-context validation, so this path cannot be claimed as the extension’s inline payment mechanism.
 
 No real holds or automatic purchases occur. This does not establish identity or a binding purchase promise. Production card acceptance needs merchant/acquirer onboarding and an approved commercial model; one merchant’s authorization is not transferable to another seller.
 
@@ -53,6 +55,6 @@ Verified live: Sony WH-1000XM5 Black yielded 4 candidates and 31 rejected result
 Price cards render only for strict matching listings below the selected unit budget. Equal/higher/no-result searches render no comparison card. Qualified lower listed prices replace the corresponding unit-price baseline in the waiting scenario, multiplied by quantity; other cart items keep their budgets. Tax/delivery uncertainty remains visible. Authorization amounts remain unchanged.
 
 ## Extension toolbar popup
-Later opens in the compact Chrome toolbar popup. No sidebar or new tab. The default Visa sandbox confirmation renders inside the same popup and authorizes with the preset test card; the optional hosted-fields website path remains available. See amazon-extension/README.md for installation and permissions.
+Later opens in the compact Chrome toolbar popup. No sidebar or new tab. Native sandbox card entry renders inside the same popup. A short-lived, owner-scoped flow links it to the cart without persisting card data to extension storage. See amazon-extension/README.md for installation and permissions.
 
 Search cache now persists for one hour across restarts, includes empty results, merges simultaneous lookups, and retains the hourly request counter. Cached results are timestamped; no search runs just from opening Later.

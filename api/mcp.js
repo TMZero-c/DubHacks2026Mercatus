@@ -9,7 +9,7 @@ export default async function handler(req,res){
  if(!originAllowed(req))return send(res,403,{error:'Untrusted request origin'});
  if(!authenticated(req))return send(res,401,{error:'Workspace access key required'},{'WWW-Authenticate':'Bearer realm="later-merchant"'});
  if(req.method!=='POST')return send(res,405,{error:'Use Streamable HTTP POST. This stateless server has no standalone SSE stream.'},{Allow:'POST'});
- const server=new Server({name:'later-merchant',version:'1.1.0'},{capabilities:{tools:{}},instructions:'Authenticated hosted merchant demo. All carts are clearly synthetic; no Visa or payment tools. Create paused campaigns with provided inventory, preview, then activate only within merchant instructions.'});
+ const server=new Server({name:'later-merchant',version:'1.1.0'},{capabilities:{tools:{}},instructions:'Authenticated merchant workspace. Only confirmed Visa sandbox authorizations qualify as intents. No synthetic-intent or payment tool is available. Create paused campaigns with provided inventory, preview, then activate only within merchant instructions.'});
  server.setRequestHandler(ListToolsRequestSchema,async()=>({tools:hostedTools}));
  server.setRequestHandler(CallToolRequestSchema,async request=>{try{const result=await execute(request.params.name,request.params.arguments||{});return{content:[{type:'text',text:JSON.stringify(result)}],isError:false};}catch(e){return{content:[{type:'text',text:e.message}],isError:true};}});
  const transport=new StreamableHTTPServerTransport({sessionIdGenerator:undefined,enableJsonResponse:true});res.on('close',()=>{transport.close();server.close();});

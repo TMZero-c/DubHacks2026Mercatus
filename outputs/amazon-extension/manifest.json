@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Later \u2014 Wait & save",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Read your shopping page, compare prices, and let merchants compete for your cart.",
   "permissions": [
     "activeTab",
