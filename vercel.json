@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "framework": null,
+  "buildCommand": "npm run build:hosted",
+  "outputDirectory": "public",
+  "functions": {
+    "api/*.js": { "maxDuration": 60, "includeFiles": "outputs/committed-cart/**" }
+  },
+  "rewrites": [
+    { "source": "/mcp", "destination": "/api/mcp" },
+    { "source": "/api/merchant/:path*", "destination": "/api/app" },
+    { "source": "/api/login", "destination": "/api/app" },
+    { "source": "/api/health", "destination": "/api/app" },
+    { "source": "/", "destination": "/api/app" },
+    { "source": "/:asset(brand.css|bootstrap.min.css|merchant-manager.css|merchant-manager.js|catalog-csv.js)", "destination": "/api/app" },
+    { "source": "/assets/:path*", "destination": "/api/app" }
+  ]
+}

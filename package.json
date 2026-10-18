@@ -4,14 +4,20 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": "24.x"
   },
   "scripts": {
     "start": "node outputs/committed-cart/server.mjs",
     "test": "node --test outputs/committed-cart/test.mjs outputs/committed-cart/*.test.mjs outputs/visa-sandbox/test.mjs",
-    "test:extension": "node work/extension-qa/popup-native-test.mjs && node work/extension-qa/generic-store-test.mjs && node work/extension-qa/check.mjs && node work/extension-qa/wait-save-test.mjs && node work/extension-qa/panel-test.mjs && node work/extension-qa/card-entry-test.mjs"
+    "test:extension": "node work/extension-qa/popup-native-test.mjs && node work/extension-qa/generic-store-test.mjs && node work/extension-qa/check.mjs && node work/extension-qa/wait-save-test.mjs && node work/extension-qa/panel-test.mjs && node work/extension-qa/card-entry-test.mjs",
+    "build:hosted": "node scripts/build-hosted.mjs",
+    "test:hosted": "node --test hosted/*.test.mjs"
   },
   "devDependencies": {
     "linkedom": "^0.18.12"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@vercel/blob": "^2.8.2"
   }
 }

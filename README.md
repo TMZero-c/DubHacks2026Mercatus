@@ -47,3 +47,7 @@ The merchant integration test uses an isolated local port and synthetic carts. I
 Only blank `.env.example` templates are committed. Visa/SerpAPI keys, `.env` files, MCP credentials, local payment state, caches, logs and captured screenshots are excluded. Supply your own keys locally. This is a loopback-only shared merchant demo, not a production service or a demonstrated high-throughput payments system.
 
 [Shopper/API details](outputs/committed-cart/README.md) · [Visa sandbox setup](outputs/visa-sandbox/README.md)
+
+## Hosted MCP demo
+
+The merchant dashboard and authenticated Streamable HTTP MCP service are available at https://later-merchant-mcp.vercel.app. It uses separate private persistent storage and explicitly synthetic test carts, with no hosted payment endpoints or uploaded Visa credentials. See [hosted setup and testing](HOSTED-MCP.md) for connection, access-key handling, and deployment details.

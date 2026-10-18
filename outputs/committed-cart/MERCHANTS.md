@@ -93,3 +93,7 @@ node outputs/committed-cart/merchant-api.test.mjs
 The HTTP/MCP test starts an isolated server on port 4326 and synthetic cart state under the temporary directory. It checks migration, paused creation, dry run, activation, automatic offer propagation to shopper state, selection analytics, idempotency, authentication/origin boundaries, private key permissions, MCP discovery/calls and restart persistence. It makes no Visa requests and does not alter the running demo's carts or holds.
 
 References: [Meta campaign/ad-set SDK](https://github.com/facebook/facebook-php-business-sdk/blob/main/DEVELOPER_GUIDE.md), [Meta API examples](https://www.postman.com/meta/facebook-marketing-api/folder/8123rwa/adsets), [MCP stdio transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports), [MCP tools](https://modelcontextprotocol.io/specification/2025-06-18/server/tools).
+
+## Hosted test workspace
+
+A separate authenticated Vercel deployment now exposes Streamable HTTP at https://later-merchant-mcp.vercel.app/mcp. It includes synthetic test carts and no payment endpoints. The local stdio instructions above remain valid. See [HOSTED-MCP.md](../../HOSTED-MCP.md) for the remote client configuration, private access keys, storage and test workflow.

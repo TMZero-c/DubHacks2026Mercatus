@@ -1,0 +1,16 @@
+.git
+node_modules
+.env
+.env.*
+**/.env
+**/.env.*
+**/.local
+**/node_modules
+work
+outputs/amazon-extension
+outputs/visa-sandbox
+*.zip
+*.tar.gz
+.githooks
+.local
+HOSTED-MCP.md
