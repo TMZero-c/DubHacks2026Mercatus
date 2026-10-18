@@ -6,7 +6,7 @@ panel.id='collectiblesPanel';panel.className='collectibles-panel';panel.hidden=t
 panel.innerHTML=`
   <div class="collectibles-top">
     <button id="collectiblesClose" class="deal-back" aria-label="Back to shopping">←</button>
-    <h1 id="dealPanelTitle">Your deals</h1><span class="badge rounded-pill deal-badge-neutral">Demo</span>
+    <h1 id="dealPanelTitle">Your deals</h1><img id="dealPanelBag" class="deal-panel-bag" src="assets/bags/red-happy.svg" alt="" aria-hidden="true">
   </div>
   <div class="collectibles-scroll">
     <div id="collectiblesStatus" class="collectibles-status" role="status"></div>
@@ -29,6 +29,7 @@ const el=(tag,text,className)=>{const node=document.createElement(tag);if(text!=
 const badge=(text,tone='neutral')=>el('span',text,'badge rounded-pill deal-badge-'+tone);
 const button=(text,style='outline-primary')=>{const node=el('button',text,'btn btn-sm '+(style==='outline-primary'?'btn-outline':style==='link'?'btn-ghost':'btn-'+style));node.type='button';return node;};
 const shortDate=value=>new Date(value).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+const mascot=(kind,className='deal-empty-bag')=>{const image=el('img',undefined,className);image.src='assets/bags/'+kind+'.svg';image.alt='';image.setAttribute('aria-hidden','true');return image;};
 function proofLink(proof,label){const link=el('a',label);link.href=proof.explorer;link.target='_blank';link.rel='noopener noreferrer';return link;}
 async function request(path,body,endpoint=null){
   const {laterAuth}=await chrome.storage.local.get('laterAuth');
@@ -94,11 +95,11 @@ function render(){
     const filter=button(icon+' '+label,'ghost');filter.setAttribute('aria-pressed',String(category===key));filter.onclick=()=>{category=key;confirmation=null;render();};filters.append(filter);
   }
   const passes=state.passes;
-  if(!passes.length){const empty=el('div',undefined,'deal-empty');empty.append(el('h2',category==='available'?'Your next deal starts here':category==='shared'?'No shared deals yet':'No purchases yet'),el('p',category==='available'?'Add a deal link below.':category==='shared'?'Open an available deal to create a link.':'Your redeemed deals will appear here.'));list.append(empty);}
+  if(!passes.length){const empty=el('div',undefined,'deal-empty');empty.append(mascot('purple-bow'),el('h2',category==='available'?'Your next deal starts here':category==='shared'?'No shared deals yet':'No purchases yet'),el('p',category==='available'?'Add a deal link below.':category==='shared'?'Open an available deal to create a link.':'Your redeemed deals will appear here.'));list.append(empty);}
   for(const pass of passes){
     const card=el('details',undefined,'deal-card list-row'),body=el('div',undefined,'deal-card-body');card.dataset.id=pass.id;card.open=openCards.has(pass.id)||confirmation===pass.id;
     card.classList.toggle('deal-confirming',confirmation===pass.id);
-    const product=el('summary',undefined,'deal-product'),image=el('img',undefined,'deal-thumbnail');image.src='mercatus-first-drop.png';image.alt='Mercatus marketplace';image.width=72;image.height=72;
+    const product=el('summary',undefined,'deal-product'),image=el('img',undefined,'deal-thumbnail');image.src='assets/bags/'+(pass.status==='redeemed'?'blue-sunglasses':'purple-bow')+'.svg';image.alt='';image.width=48;image.height=48;
     const info=el('div',undefined,'deal-info'),name=pass.product.replace(/^First wait · /,'');const titleRow=el('div',undefined,'deal-title-row');titleRow.append(el('h2',name.charAt(0).toUpperCase()+name.slice(1),'card-title'),el('strong',money(pass.priceCents),'deal-price'));info.append(titleRow);
     const badges=el('div',undefined,'deal-badges');
     const [label,tone]=({active:['Expires '+shortDate(pass.expiresAt),'neutral'],shared:['Shared','primary'],reserved:['Processing','warning'],redeemed:['Redeemed','neutral'],issuing:['Preparing','neutral']})[pass.status]||[pass.status,'neutral'];
@@ -138,7 +139,7 @@ const claim=new URL(location.href).searchParams.get('claim');if(claim)$('collect
 setInterval(async()=>{const {laterAuth}=await chrome.storage.local.get('laterAuth');if(claim&&laterAuth?.user?.id&&lastOwner!==laterAuth.user.id){lastOwner=laterAuth.user.id;$('collectiblesCode').value=claim;await open();}if(!document.hidden)refresh();},2000);
 
 function setHistoryMode(value){
- historyMode=value;historyVersion++;$('dealPanelTitle').textContent=value?'Product history':'Your deals';
+ historyMode=value;historyVersion++;$('dealPanelTitle').textContent=value?'Product history':'Your deals';$('dealPanelBag').src='assets/bags/'+(value?'blue-sunglasses':'red-happy')+'.svg';
  $('productHistoryOpen').setAttribute('aria-pressed',String(value));$('collectiblesOpen').setAttribute('aria-pressed',String(!value));
  $('productHistoryList').hidden=!value;$('collectiblesList').hidden=value;$('collectiblesClaim').hidden=value;
  message('');
@@ -164,10 +165,10 @@ async function openProductHistory(){
  try{const data=await request('');if(version!==historyVersion)return;for(const pass of data.passes||[])records.push({name:pass.product.replace(/^First wait · /,''),image:'mercatus-first-drop.png',priceCents:pass.priceCents,kind:pass.status==='redeemed'?'Purchased':pass.status==='shared'?'Shared deal':'Deal saved',seenAt:0});}catch{}
  if(version!==historyVersion)return;
  records.sort((a,b)=>b.seenAt-a.seenAt);
- if(!records.length){const empty=el('div',undefined,'deal-empty');empty.append(el('h2','No products yet'),el('p','Products you bring into Mercatus will be saved here.'));list.append(empty);return;}
+ if(!records.length){const empty=el('div',undefined,'deal-empty');empty.append(mascot('yellow-wink'),el('h2','No products yet'),el('p','Products you bring into Mercatus will be saved here.'));list.append(empty);return;}
  for(const record of records.slice(0,100)){
   const row=el('article',undefined,'product-history-row'),content=el('div',undefined,'product-history-copy');
-  if(record.image&&(/^(https:\/\/)/.test(record.image)||record.image==='mercatus-first-drop.png')){const img=el('img');img.src=record.image;img.alt='';img.onerror=()=>img.hidden=true;row.append(img);}
+  if(record.image&&(/^(https:\/\/)/.test(record.image)||record.image==='mercatus-first-drop.png')){const img=el('img');img.src=record.image==='mercatus-first-drop.png'?'assets/bags/purple-bow.svg':record.image;img.alt='';img.onerror=()=>img.hidden=true;row.append(img);}else row.append(mascot('yellow-wink','history-bag'));
   content.append(el('strong',record.name),el('span',record.kind+(record.seenAt?' · '+shortDate(record.seenAt):'')));row.append(content);
   if(Number.isFinite(record.priceCents))row.append(el('strong',money(record.priceCents),'history-price'));
   list.append(row);

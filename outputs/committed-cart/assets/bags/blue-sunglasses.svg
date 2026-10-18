@@ -1,0 +1,6 @@
+<svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="cool shopping bag mascot">
+  <path fill="#3997f0" d="M29 55c0-8 6-13 14-13h74c8 0 14 5 14 13l9 77c1 8-5 15-13 15H33c-8 0-14-7-13-15Z"/>
+  <path fill="none" stroke="#17201f" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" d="M51 54c0-25 12-37 30-37s30 12 30 37"/>
+  <path fill="#17201f" d="m48 77 28-3-2 18-15 2c-6 1-10-3-10-9Zm64 0-28-3 2 18 15 2c6 1 10-3 10-9Z"/>
+  <path fill="none" stroke="#17201f" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" d="M76 78h9M68 109c8 4 17 4 25 0"/>
+</svg>
