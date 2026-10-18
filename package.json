@@ -7,7 +7,7 @@
     "node": "24.x"
   },
   "scripts": {
-    "start": "node outputs/committed-cart/server.mjs",
+    "start": "node --dns-result-order=ipv4first outputs/committed-cart/server.mjs",
     "test": "node --test outputs/committed-cart/test.mjs outputs/committed-cart/*.test.mjs outputs/visa-sandbox/test.mjs outputs/agent-payments/*.test.mjs",
     "test:extension": "node work/extension-qa/popup-native-test.mjs && node work/extension-qa/generic-store-test.mjs && node work/extension-qa/check.mjs && node work/extension-qa/wait-save-test.mjs && node work/extension-qa/panel-test.mjs && node work/extension-qa/card-entry-test.mjs",
     "build:hosted": "node scripts/build-hosted.mjs",

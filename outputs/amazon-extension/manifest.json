@@ -1,18 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "Later \u2014 Wait & save",
-  "version": "0.7.1",
-  "description": "Read your shopping page, compare prices, and let merchants compete for your cart.",
+  "name": "Mercatus — Wait & save",
+  "version": "0.8.0",
+  "description": "Name your price and let merchants compete for your cart with Mercatus Wait & save.",
   "permissions": [
     "activeTab",
     "scripting",
     "storage"
   ],
   "action": {
-    "default_title": "Open Later",
+    "default_title": "Open Mercatus",
     "default_icon": {
-      "32": "icon-32.png",
-      "192": "icon-192.png"
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
     },
     "default_popup": "popup.html"
   },
@@ -38,8 +40,10 @@
     }
   ],
   "icons": {
-    "32": "icon-32.png",
-    "192": "icon-192.png"
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
   },
   "minimum_chrome_version": "127",
   "host_permissions": [

@@ -20,9 +20,10 @@
 <div class="progress-track" id="progressTrack" aria-hidden="true"><span class="progress-fill progress-step-1"></span></div>
 <main id="app" aria-busy="true">
 <section id="auth" class="auth">
-<div class="empty-shape" aria-hidden="true">m<span>.</span></div>
-<h1 id="authTitle">Log in</h1>
-<p id="authHint">Sign in to wait & save with Later.</p>
+<img class="auth-bag" src="assets/bags/red-happy.svg" width="64" height="64" alt="" aria-hidden="true">
+<div class="auth-card">
+<h1 id="authTitle">Welcome to mercatus.</h1>
+<p id="authHint">Name your price. Let the market come to you.</p>
 <form id="authForm">
 <label for="authEmail">Email</label>
 <input id="authEmail" name="email" type="email" autocomplete="username" required maxlength="254">
@@ -30,7 +31,8 @@
 <input id="authPassword" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128">
 <button id="authSubmit" class="primary" type="submit">Log in</button>
 </form>
-<button id="authToggle" class="quiet wide" type="button">Need an account? Sign up</button>
+<button id="authToggle" class="auth-switch" type="button">Need an account? Sign up</button>
+</div>
 </section>
 <section id="home" class="empty" hidden><div class="empty-shape" aria-hidden="true">m<span>.</span></div><h1>Your activity</h1><p>Open a shopping page to start a new wait.</p><button id="reviewHistory" class="primary">Review past orders</button></section>
 <section id="history" hidden><div class="section-heading"><h1>Your activity</h1><span id="historyCount"></span></div><div id="historyList"></div><p id="historyEmpty" class="history-empty" hidden>No orders to review yet.</p><div id="historyPagination" class="pagination" hidden><button id="historyPrevious" aria-label="Previous orders">‹</button><span id="historyPageCount"></span><button id="historyNext" aria-label="Next orders">›</button></div></section>

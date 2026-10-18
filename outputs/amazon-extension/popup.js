@@ -9,7 +9,7 @@ const active=c=>c&&['authorized','authorizing','reversing','needs_review'].inclu
 const signature=items=>JSON.stringify(items.map(x=>[x.name,x.variant,x.url||'',Number(x.quantity),Number(x.price??x.cents/100)]));
 const sameCommitment=()=>active(current)&&draft&&signature(current.items)===signature(draft.items);
 const duration=()=>hours===.25?'15 minutes':hours===12?'Overnight':'1 hour';
-function notify(text=''){ $('message').textContent=text;$('message').hidden=!text;document.body.classList.toggle('has-message',!!text); }
+function notify(text=''){ $('message').textContent=text;$('message').hidden=!text;$('message').classList.toggle('is-error',!!text);document.body.classList.toggle('has-message',!!text); }
 function normalize(payload){
  if(!payload||!Array.isArray(payload.items)||!payload.items.length||payload.items.length>8)throw new Error('Choose a cart with 1–8 items.');
  return{source:String(payload.source||'Shopping cart').slice(0,100),items:payload.items.map(x=>{
@@ -24,7 +24,8 @@ function saveUI(){return chrome.storage.session.set({laterUI:{draft,hours,quotes
 const queryFor=productQuery;
 async function request(path,body,{auth=true}={}){
  const headers={};if(body)headers['Content-Type']='application/json';if(auth&&sessionToken)headers.Authorization='Bearer '+sessionToken;
- const response=await fetch(API+path,{credentials:'include',cache:'no-store',signal:AbortSignal.timeout(path==='/api/compare'||path==='/api/commit-card'||path==='/api/card-flow'?30000:7000),headers,...(body?{method:'POST',body:JSON.stringify(body)}:{})});
+ const slow=path==='/api/compare'||path==='/api/commit-card'||path==='/api/card-flow'||path.startsWith('/api/auth/');
+ const response=await fetch(API+path,{credentials:'include',cache:'no-store',signal:AbortSignal.timeout(slow?30000:7000),headers,...(body?{method:'POST',body:JSON.stringify(body)}:{})});
  const data=await response.json().catch(()=>({}));
  if(response.status===401){const err=new Error(data.error||'Sign in to continue.');err.code='auth';if(auth&&path!=='/api/auth/me'){await clearSession();showAuth();}throw err;}
  if(!response.ok)throw new Error(data.error||'Please try again.');return data;
@@ -39,11 +40,21 @@ function showAuth(message=''){
 }
 function setAuthMode(mode){
  authMode=mode==='signup'?'signup':'login';
- $('authTitle').textContent=authMode==='signup'?'Create account':'Log in';
- $('authHint').textContent=authMode==='signup'?'Save waits to your Later account.':'Sign in to wait & save with Later.';
+ $('authTitle').textContent='Welcome to mercatus.';
+ $('authHint').textContent='Name your price. Let the market come to you.';
  $('authSubmit').textContent=authMode==='signup'?'Sign up':'Log in';
  $('authToggle').textContent=authMode==='signup'?'Already have an account? Log in':'Need an account? Sign up';
  $('authPassword').autocomplete=authMode==='signup'?'new-password':'current-password';
+}
+function friendlyAuthError(message=''){
+ const raw=String(message||'');
+ if(!raw||raw==='Failed to fetch'||/timed out|AbortError|NetworkError/i.test(raw))return 'Cannot reach Mercatus. Keep npm start running, then try again.';
+ if(/already exists/i.test(raw))return 'An account with that email already exists. Try logging in.';
+ if(/Incorrect email or password/i.test(raw))return 'Wrong email or password. Try again.';
+ if(/valid email/i.test(raw))return 'Enter a valid email address.';
+ if(/Password must/i.test(raw))return 'Password must be at least 8 characters.';
+ if(/MongoDB Atlas|Network Access|MONGODB_URI|Sign-in is unavailable/i.test(raw))return raw;
+ return raw||'Could not sign in. Try again.';
 }
 function showAppShell(){
  document.body.classList.remove('auth-only');$('auth').hidden=true;$('logout').hidden=false;$('logout').title=authUser?.email||'Log out';
@@ -116,11 +127,11 @@ async function readPage({refreshState=true}={}){
  finally{reading=false;$('read').disabled=false;$('retry').disabled=false;}
 }
 async function syncState(){
- try{const data=await request('/api/state');online=!!data.configured;if($('message').textContent.startsWith('Later is offline.'))notify();if(!online)notify('Connect Visa in the local app before starting a wait.');
+ try{const data=await request('/api/state');online=!!data.configured;if($('message').textContent.startsWith('Mercatus is offline.'))notify();if(!online)notify('Connect Visa in the local app before starting a wait.');
   historyCarts=data.carts||[];const pending=historyCarts.find(active);current=pending||null;
   if(pending&&(!draft||sameCommitment())){const old=draft?.items||[];draft=normalize({source:'Shopping cart',items:pending.items.map(x=>({...x,image:old.find(o=>o.url===x.url)?.image||''}))});confirming=false;}
   await chrome.storage.session.set({laterState:pending||null,laterHistory:historyCarts});render();return true;
- }catch(e){if(!authUser){notify(e.message||'Sign in to continue.');render();return false;}online=false;notify('Later is offline. Start the local app, then retry.');render();return false;}
+ }catch(e){if(!authUser){notify(e.message||'Sign in to continue.');render();return false;}online=false;notify('Mercatus is offline. Start the local app, then retry.');render();return false;}
 }
 async function compare(){
  if(searching||!draft)return;const item=draft.items[index],query=queryFor(item),key=query.toLowerCase(),requestRevision=revision;searching=true;notify();render();
@@ -164,12 +175,12 @@ $('previous').onclick=()=>{index--;notify();render();};$('next').onclick=()=>{in
 document.querySelectorAll('[data-hours]').forEach(button=>button.onclick=()=>{hours=Number(button.dataset.hours);render();saveUI();});
 $('authToggle').onclick=()=>{setAuthMode(authMode==='signup'?'login':'signup');notify();};
 $('authForm').onsubmit=async event=>{
- event.preventDefault();if(authBusy)return;authBusy=true;$('authSubmit').disabled=true;notify();
+ event.preventDefault();if(authBusy)return;authBusy=true;document.body.classList.add('auth-busy');$('authSubmit').disabled=true;notify();
  try{
   const body={email:$('authEmail').value,password:$('authPassword').value};
   const result=await request(authMode==='signup'?'/api/auth/signup':'/api/auth/login',body,{auth:false});
   await saveSession(result.token,result.user);$('authPassword').value='';await startApp();
- }catch(e){notify(e.message==='Failed to fetch'?'Cannot reach the local app. Keep npm start running, then try again.':(e.message||'Could not sign in.'));}finally{authBusy=false;$('authSubmit').disabled=false;}
+ }catch(e){notify(friendlyAuthError(e.message));}finally{authBusy=false;document.body.classList.remove('auth-busy');$('authSubmit').disabled=false;}
 };
 $('logout').onclick=async()=>{
  try{if(sessionToken)await request('/api/auth/logout',{});}catch{}
@@ -181,7 +192,7 @@ async function startApp(){
  try{const saved=await chrome.storage.session.get(['laterUI','laterCart','laterState','laterHistory']);const ui=saved.laterUI;historyCarts=saved.laterHistory||[];
   if(ui?.draft&&!draft){draft=normalize(ui.draft);hours=[.25,1,12].includes(ui.hours)?ui.hours:1;lastImport=ui.lastImport||0;searchCache=ui.searchCache||{};quotes={};for(const item of draft.items){const cache=searchCache[queryFor(item).toLowerCase()];if(cache&&Date.now()-cache.at<3600000){const lower=lowerOffers(cache.offers,Math.round(Number(item.price)*100));if(lower.length)quotes[itemKey(item)]=Math.min(...lower.map(x=>x.price));}}}
   if(active(saved.laterState)){current=saved.laterState;if(!draft)draft=normalize({items:current.items});}
-  render();const check=syncState();await readPage({refreshState:false});const connected=await check;if(!connected)notify('Later is offline. Start the local app, then retry.');else if(!online)notify('Connect Visa in the local app before starting a wait.');
+  render();const check=syncState();await readPage({refreshState:false});const connected=await check;if(!connected)notify('Mercatus is offline. Start the local app, then retry.');else if(!online)notify('Connect Visa in the local app before starting a wait.');
  }catch{pageMode='home';render();notify('Could not load your activity. Try again.');$('app').setAttribute('aria-busy','false');$('emptyMessage').textContent='Open your shopping cart to get started.';}
 }
 async function boot(){
@@ -190,7 +201,7 @@ async function boot(){
   const stored=await chrome.storage.local.get('laterAuth');const savedAuth=stored.laterAuth;
   let status=null;try{status=await request('/api/auth/status',null,{auth:false});}catch{status=null;}
   if(status&&!status.configured){showAuth('Add MONGODB_URI to outputs/committed-cart/.env, then restart npm start.');return;}
-  if(!status){showAuth('Later is offline. Start the local app (npm start), then reopen this popup.');return;}
+  if(!status){showAuth('Mercatus is offline. Start the local app (npm start), then reopen this popup.');return;}
   if(savedAuth?.token){sessionToken=savedAuth.token;
    try{const me=await request('/api/auth/me');authUser=me.user;await saveSession(sessionToken,authUser);await startApp();return;}
    catch(e){await clearSession();showAuth(e.code==='auth'?'Sign in to continue.':(e.message||'Could not verify your session. Sign in again.'));return;}}
