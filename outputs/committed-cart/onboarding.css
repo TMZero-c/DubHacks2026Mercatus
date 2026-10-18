@@ -1,0 +1,57 @@
+@font-face{font-family:"Nunito";font-style:normal;font-weight:700;font-display:swap;src:url("/assets/fonts/nunito-700.woff2") format("woff2")}
+@font-face{font-family:"Nunito";font-style:normal;font-weight:800;font-display:swap;src:url("/assets/fonts/nunito-800.woff2") format("woff2")}
+@font-face{font-family:"Nunito";font-style:normal;font-weight:900;font-display:swap;src:url("/assets/fonts/nunito-900.woff2") format("woff2")}
+
+.account-chip{position:relative;align-items:stretch}
+.account-menu{position:relative}
+.account-menu>summary{list-style:none;cursor:pointer;font-size:14px;color:var(--muted,#6f746e);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:8px 0}
+.account-menu>summary::-webkit-details-marker{display:none}
+.account-menu-panel{position:absolute;right:0;top:calc(100% + 8px);min-width:200px;background:#fff;border:1px solid #ded9cf;border-radius:12px;box-shadow:0 10px 28px rgba(46,39,29,.1);padding:8px;z-index:40;display:flex;flex-direction:column;gap:4px}
+.account-menu-panel button{border:0;background:transparent;text-align:left;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:650;color:#17201f;font-family:"Nunito",sans-serif}
+.account-menu-panel button:hover{background:#f7f4ee}
+.account-menu-panel #logout{color:#585b56}
+
+#merchantOnboarding{border:0;padding:0;width:min(440px,94vw);max-height:min(640px,92vh);border-radius:20px;background:#f7f1e7;box-shadow:0 24px 80px rgba(23,32,31,.22);overflow:hidden;font-family:"Nunito",sans-serif;color:#17201f}
+#merchantOnboarding::backdrop{background:rgba(23,32,31,.45);backdrop-filter:blur(3px)}
+#merchantOnboarding .onboarding{position:relative;display:flex;flex-direction:column;min-height:520px}
+#merchantOnboarding .onboarding-skip{position:absolute;top:14px;right:16px;z-index:3;border:0;background:transparent;color:#6f746e;font-size:13px;font-weight:800;padding:6px 4px;text-decoration:underline;text-underline-offset:2px;font-family:inherit}
+#merchantOnboarding .onboarding-skip:hover{color:#17201f}
+#merchantOnboarding .onboarding-stage{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;touch-action:pan-y}
+#merchantOnboarding .onboarding-hero{position:relative;width:100%;height:240px;display:grid;place-items:center;overflow:hidden}
+#merchantOnboarding .onboarding-waves{position:absolute;inset:0;width:100%;height:100%;color:var(--onboarding-accent,#ff5c4d)}
+#merchantOnboarding .wave-cream{fill:#fffdf9}
+#merchantOnboarding .wave-tint{fill:currentColor;opacity:.28}
+#merchantOnboarding .onboarding-bag{position:relative;z-index:1;width:120px;height:120px;transform-origin:50% 100%}
+#merchantOnboarding .onboarding-bag.is-bounce{animation:merchant-onboarding-bounce .55s ease}
+@keyframes merchant-onboarding-bounce{0%{transform:translateY(14px) scale(.96);opacity:.4}55%{transform:translateY(-7px) scale(1.03);opacity:1}100%{transform:translateY(0) scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){#merchantOnboarding .onboarding-bag.is-bounce{animation:none}}
+#merchantOnboarding .onboarding-stage h1{margin:10px 28px 0;font-size:28px;font-weight:900;letter-spacing:-.04em;line-height:1.15}
+#merchantOnboarding .onboarding-stage p{margin:12px 32px 0;font-size:15px;font-weight:600;line-height:1.45;color:#6f746e;max-width:340px}
+#merchantOnboarding .onboarding-footer{display:flex;flex-direction:column;gap:16px;padding:22px 24px 24px}
+#merchantOnboarding .onboarding-dots{display:flex;justify-content:center;gap:8px}
+#merchantOnboarding .onboarding-dot{width:9px;height:9px;border-radius:50%;border:0;padding:0;background:#d8d2c6;cursor:pointer}
+#merchantOnboarding .onboarding-dot.is-active{background:#2864e8;transform:scale(1.15)}
+#merchantOnboarding .onboarding-next{width:100%;min-height:50px;border:0;border-radius:14px;background:#2864e8;color:#fff;font-size:15px;font-weight:900;font-family:inherit;box-shadow:0 4px 10px rgba(40,100,232,.2)}
+#merchantOnboarding .onboarding-next:hover{background:#1d54cd}
+
+.shopper-onboarding{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;background:#f7f1e7;font-family:"Nunito",sans-serif;color:#17201f}
+.shopper-onboarding[hidden]{display:none!important}
+body.shopper-onboarding-only .auth-gate{visibility:hidden!important}
+.shopper-onboarding .onboarding-skip{position:absolute;top:18px;right:22px;z-index:3;border:0;background:transparent;color:#6f746e;font-size:14px;font-weight:800;padding:6px 4px;text-decoration:underline;text-underline-offset:2px;font-family:inherit}
+.shopper-onboarding .onboarding-stage{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;touch-action:pan-y;padding-bottom:12px}
+.shopper-onboarding .onboarding-hero{position:relative;width:100%;height:min(42vh,280px);display:grid;place-items:center;overflow:hidden}
+.shopper-onboarding .onboarding-waves{position:absolute;inset:0;width:100%;height:100%;color:var(--onboarding-accent,#ff5c4d)}
+.shopper-onboarding .wave-cream{fill:#fffdf9}
+.shopper-onboarding .wave-tint{fill:currentColor;opacity:.28}
+.shopper-onboarding .onboarding-bag{position:relative;z-index:1;width:120px;height:120px;transform-origin:50% 100%}
+.shopper-onboarding .onboarding-bag.is-bounce{animation:merchant-onboarding-bounce .55s ease}
+.shopper-onboarding .onboarding-stage h1{margin:12px 28px 0;font-size:clamp(26px,4vw,34px);font-weight:900;letter-spacing:-.04em;line-height:1.15}
+.shopper-onboarding .onboarding-stage p{margin:12px 32px 0;font-size:16px;font-weight:600;line-height:1.45;color:#6f746e;max-width:420px}
+.shopper-onboarding .onboarding-footer{display:flex;flex-direction:column;gap:16px;padding:20px 24px 32px;width:min(440px,100%);margin:0 auto;box-sizing:border-box}
+.shopper-onboarding .onboarding-dots{display:flex;justify-content:center;gap:8px}
+.shopper-onboarding .onboarding-dot{width:9px;height:9px;border-radius:50%;border:0;padding:0;background:#d8d2c6;cursor:pointer}
+.shopper-onboarding .onboarding-dot.is-active{background:#2864e8;transform:scale(1.15)}
+.shopper-onboarding .onboarding-next{width:100%;min-height:52px;border:0;border-radius:14px;background:#2864e8;color:#fff;font-size:16px;font-weight:900;font-family:inherit;box-shadow:0 4px 10px rgba(40,100,232,.2)}
+.shopper-onboarding .onboarding-next:hover{background:#1d54cd}
+.auth-how{display:block;width:100%;margin-top:8px;padding:6px;border:0;background:transparent;color:#6f746e;font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:2px;font-family:"Nunito",sans-serif}
+.auth-how:hover{color:#2864e8}

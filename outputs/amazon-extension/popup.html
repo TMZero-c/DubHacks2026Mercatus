@@ -3,6 +3,24 @@
 <body class="auth-only">
 <header class="popup-header"><a class="wordmark" href="#" aria-label="Mercatus">mercatus<span>.</span></a><div id="headerActions" class="header-actions"><button id="collectiblesOpen" class="icon-button" type="button" aria-label="Deal passes" title="Deal passes" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v5a2 2 0 0 0 0 4v5H4v-5a2 2 0 0 0 0-4Z"/><path d="M15 5v3m0 3v2m0 3v3"/></svg></button><button id="productHistoryOpen" class="icon-button" type="button" aria-label="Product history" title="Product history" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.7 7M3 4v7h7m2-4v5l3 2"/></svg></button><button id="historyBack" class="quiet" hidden>Back</button><button id="read" class="icon-button" aria-label="Refresh cart" title="Refresh cart" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.5 8a7 7 0 0 1 11.6-2.1L20 9M4 15l2.9 3.1A7 7 0 0 0 18.5 16"/></svg></button><button id="logout" class="icon-button" aria-label="Log out" title="Log out" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5v16h4m6-12 4 4-4 4m-6-4h10"/></svg></button></div></header>
 <main id="app" aria-busy="true">
+<section id="onboarding" class="onboarding" hidden aria-label="How Mercatus works">
+<button type="button" class="onboarding-skip" id="onboardingSkip">Skip</button>
+<div class="onboarding-stage" id="onboardingStage">
+  <div class="onboarding-hero" aria-hidden="true">
+    <svg class="onboarding-waves" viewBox="0 0 380 210" preserveAspectRatio="none" aria-hidden="true">
+      <path class="wave-cream" d="M0 0h380v128c-42 28-96 44-152 36S98 130 0 152V0z"/>
+      <path class="wave-tint" d="M0 0h380v98c-48 34-108 48-168 38S92 104 0 124V0z"/>
+    </svg>
+    <img class="onboarding-bag" id="onboardingBag" src="assets/bags/red-happy.svg" width="120" height="120" alt="">
+  </div>
+  <h1 id="onboardingTitle">Name your price</h1>
+  <p id="onboardingBody">Set the most you'll pay for anything in your cart.</p>
+</div>
+<div class="onboarding-footer">
+  <div class="onboarding-dots" id="onboardingDots" role="tablist" aria-label="Onboarding slides"></div>
+  <button type="button" class="primary" id="onboardingNext">Next</button>
+</div>
+</section>
 <section id="auth" class="auth">
 <img class="auth-bag" src="assets/bags/red-happy.svg" width="64" height="64" alt="" aria-hidden="true">
 <div class="auth-card">
@@ -16,6 +34,7 @@
 <button id="authSubmit" class="primary" type="submit">Log in</button>
 </form>
 <button id="authToggle" class="auth-switch" type="button">Need an account? Sign up</button>
+<button id="authHowItWorks" class="auth-how" type="button">How it works</button>
 </div>
 </section>
 <section id="home" class="empty" hidden><img class="bag bag-large" src="assets/bags/purple-bow.svg" alt="" aria-hidden="true"><h1>Your activity</h1><p>Open a shopping page to start a new wait.</p><button id="reviewHistory" class="primary">Review past orders</button></section>
