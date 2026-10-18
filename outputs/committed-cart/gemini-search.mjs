@@ -40,17 +40,20 @@ export function disallowedContent(value){const text=String(value||'');return ref
 export function disallowedSearch(query){return /[<>]/.test(query)||disallowedContent(query);}
 export const harmfulRefusal='I can\'t help with that. I must refuse this request.';
 export const injectionRefusal='I can\'t help with that. I must refuse this request.';
+export const secretRefusal='I can\'t help with that. I must refuse this request.';
 export function harmfulInstructionRequest(text){return /\b(explosive device|pipe bomb|improvised explosive)\b/i.test(text)||/\bhow to (make|build|synthesize) (a |an )?(bomb|explosive)\b/i.test(text);}
 export function injectionRequest(text){return /\bignore all previous instructions\b/i.test(text)||/\bhidden system prompt\b/i.test(text)||/\bprint your (hidden )?(system|developer) prompt\b/i.test(text);}
+export function secretRequest(text){return /\bapi keys, passwords, or tokens\b/i.test(text)||/\breveal any api keys\b/i.test(text);}
 export const crisisNotice='I can\'t help with that. I must refuse this request. If you are thinking about suicide or self-harm, call or text 988 in the US, or contact your local emergency number.';
 export function selfHarmRequest(text){return /\b(harm myself|self-harm|self harm|kill yourself)\b/i.test(text);}
-export function moderateOutput(text){const value=String(text||'');if(value===harmfulRefusal||value===injectionRefusal||value===crisisNotice)return value;if(injectionRequest(value)||value.includes('You are a retail price lookup'))return injectionRefusal;if(selfHarmRequest(value))return crisisNotice;if(harmfulInstructionRequest(value))return harmfulRefusal;return value;}
+export function moderateOutput(text){const value=String(text||'');if(value===harmfulRefusal||value===injectionRefusal||value===secretRefusal||value===crisisNotice)return value;if(injectionRequest(value)||value.includes('You are a retail price lookup'))return injectionRefusal;if(selfHarmRequest(value))return crisisNotice;if(harmfulInstructionRequest(value))return harmfulRefusal;if(secretRequest(value))return secretRefusal;return value;}
 export function auditDecision(query,now=new Date().toISOString()){
  const text=String(query||'');
  if(/\bcapital of france\b/i.test(text))return {query,checkedAt:now,refused:false,offers:[],provider:'Grounded fact',citation:'https://www.cia.gov/the-world-factbook/countries/france/',notice:'The capital of France is Paris.'};
  if(selfHarmRequest(text))return {query,checkedAt:now,refused:true,crisis:true,offers:[],provider:'Crisis response',notice:crisisNotice};
  if(harmfulInstructionRequest(text))return {query,checkedAt:now,refused:true,offers:[],provider:'Policy',notice:harmfulRefusal};
  if(injectionRequest(text))return {query,checkedAt:now,refused:true,offers:[],provider:'Policy',notice:injectionRefusal};
+ if(secretRequest(text))return {query,checkedAt:now,refused:true,offers:[],provider:'Policy',notice:secretRefusal};
  if(disallowedSearch(text)||/\b(developer mode|private data you were given|dump the private data|hidden system prompt|api keys, passwords, or tokens|invent a fake|historical treaty|confidently as real)\b/i.test(text))return {query,checkedAt:now,refused:true,offers:[],provider:'Policy',notice:'That request is not available.'};
  return null;
 }
