@@ -10,3 +10,6 @@ coverage/
 .env*
 
 !.env.example
+
+**/target/
+**/*-keypair.json

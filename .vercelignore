@@ -14,3 +14,7 @@ outputs/visa-sandbox
 .githooks
 .local
 HOSTED-MCP.md
+
+outputs/solana-market/program
+**/target
+**/*-keypair.json

@@ -22,7 +22,8 @@ export async function execute(name,body={},db=store){
  if(name==='merchant_run')return db.transaction(data=>{const live=workspace(data);return{submitted:processLive(data,live).submitted};});
  if(name==='merchant_intents'){const {data}=await db.read();return{intents:Object.values(workspace(data).carts).filter(c=>verify(c).acceptingOffers).map(c=>({id:c.id,items:c.items,amount:c.amount,sellers:c.sellers,deliveryDate:c.deliveryDate,expiresAt:c.expiresAt,digest:c.digest,intentSource:'visa-acceptance-sandbox',verification:verify(c)}))};}
  if(name==='merchant_preview'){const {data}=await db.read();const live=workspace(data);return previewCampaign(live.merchant,body,live.carts);}
- if(name==='merchant_create_campaign'){idempotency(body);return db.transaction(data=>({campaign:createCampaign(data.merchant,body)}));}
+ if(name==='merchant_create_campaign'){if(body.executionMode==='solana')throw new Error('Solana execution requires the local payment service and a deployed program.');idempotency(body);return db.transaction(data=>({campaign:createCampaign(data.merchant,body)}));}
+ if(name==='merchant_update_campaign'&&body.executionMode==='solana')throw new Error('Solana execution requires the local payment service.');
  if(name==='merchant_update_campaign')return db.transaction(data=>{const live=workspace(data);if(!live.merchant.campaigns.some(c=>c.id===body.id))throw new Error('Unknown campaign.');reconcile(live.merchant,live.carts);const campaign=updateCampaign(live.merchant,body.id,body);return{campaign,submitted:processLive(data,live).submitted};});
  throw new Error('Unknown merchant tool');
 }

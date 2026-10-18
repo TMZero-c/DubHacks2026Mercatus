@@ -8,16 +8,26 @@
   },
   "scripts": {
     "start": "node outputs/committed-cart/server.mjs",
-    "test": "node --test outputs/committed-cart/test.mjs outputs/committed-cart/*.test.mjs outputs/visa-sandbox/test.mjs",
+    "test": "node --test outputs/committed-cart/test.mjs outputs/committed-cart/*.test.mjs outputs/visa-sandbox/test.mjs outputs/agent-payments/*.test.mjs",
     "test:extension": "node work/extension-qa/popup-native-test.mjs && node work/extension-qa/generic-store-test.mjs && node work/extension-qa/check.mjs && node work/extension-qa/wait-save-test.mjs && node work/extension-qa/panel-test.mjs && node work/extension-qa/card-entry-test.mjs",
     "build:hosted": "node scripts/build-hosted.mjs",
-    "test:hosted": "node --test hosted/*.test.mjs"
+    "test:hosted": "node --test hosted/*.test.mjs",
+    "build:solana": "node outputs/solana-market/build.mjs",
+    "test:solana": "node outputs/solana-market/test-svm.mjs",
+    "deploy:solana": "node outputs/solana-market/deploy.mjs",
+    "test:x402": "node outputs/agent-payments/x402.test.mjs"
   },
   "devDependencies": {
-    "linkedom": "^0.18.12"
+    "linkedom": "^0.18.12",
+    "litesvm": "^1.6.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "@vercel/blob": "^2.8.2"
+    "@solana-program/token": "^0.18.0",
+    "@solana/kit": "^8.5.0",
+    "@vercel/blob": "^2.8.2",
+    "@x402/core": "^2.28.0",
+    "@x402/fetch": "^2.28.0",
+    "@x402/svm": "^2.28.0"
   }
 }

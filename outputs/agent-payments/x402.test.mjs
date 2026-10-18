@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {createAgentPayments,NETWORK,USDC} from './x402.mjs';
+import {validateCart,authorize} from '../committed-cart/engine.mjs';
+import {newMerchantState} from '../committed-cart/merchant-engine.mjs';
+import {ingestIntent} from '../../hosted/intent-feed.js';
+import {encodePaymentSignatureHeader,decodePaymentRequiredHeader} from '@x402/core/http';
+// Offline transport/persistence fixtures. These are never loaded by the live service.
+const cart=validateCart({consent:true,publish:true,hours:1,sellers:'Authorized retailers only',deliveryDate:new Date(Date.now()+86400000*4).toISOString().slice(0,10),items:[{name:'Sony WH-1000XM5',variant:'Black',quantity:1,price:'120'}]});
+await authorize(cart,async()=>({id:'123456789',status:'AUTHORIZED',orderInformation:{amountDetails:{authorizedAmount:'120.00'}}}));cart.owner='PRIVATE_OWNER';cart.privateDemandKey='PRIVATE_CARD_FINGERPRINT';cart.visaReceipt={private:'PRIVATE_RECEIPT'};
+const data={carts:{[cart.id]:cart},merchant:newMerchantState()},db={read:async()=>({data}),transaction:async operation=>operation(data)};
+let verifies=0,settles=0,valid=true,confirmed=true;const seen=[];
+const payTo='5yGFYe6pUuVwjtP5hEcy2e4CJQ3VvdVWV4fAY5UiKrDx',feePayer='CKPKJWNdJEqa81x7CkZ14BVPiY6y16Sxs7owznqtWYp5';
+const facilitator={getSupported:async()=>({kinds:[{x402Version:2,scheme:'exact',network:NETWORK,extra:{feePayer}}],extensions:[],signers:{'solana:*':[feePayer]}}),verify:async()=>{verifies++;return{isValid:valid,payer:payTo};},settle:async payload=>{settles++;seen.push(JSON.stringify(payload));return{success:true,network:NETWORK,transaction:'OFFLINE_TRANSACTION_FIXTURE',payer:payTo};}};
+const service=createAgentPayments({db,payTo,origin:'http://localhost:4318',facilitator,checkRecipient:async()=>true,confirmSettlement:async()=>confirmed});
+const requestId=randomUUID(),url='http://localhost:4318/api/agent/intents/'+cart.id+'?requestId='+requestId;
+const request=(signed,target=url,method='GET',body)=>service.handle({url:target,method,headers:signed?{'payment-signature':signed}:{},body});
+const challenge=await request();assert.equal(challenge.status,402);const required=decodePaymentRequiredHeader(challenge.headers['PAYMENT-REQUIRED']);assert.equal(required.x402Version,2);assert.equal(required.accepts[0].network,NETWORK);assert.equal(required.accepts[0].asset,USDC);assert.equal(required.accepts[0].amount,'1000');assert.equal(required.accepts[0].extra.memo.length,22);
+const payload={x402Version:2,resource:required.resource,accepted:required.accepts[0],payload:{transaction:'OFFLINE_SIGNED_TRANSACTION_FIXTURE'}},signed=encodePaymentSignatureHeader(payload);
+const wrong=structuredClone(payload);wrong.accepted.network='solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';assert.equal((await request(encodePaymentSignatureHeader(wrong))).status,400);assert.equal(settles,0);
+valid=false;assert.equal((await request(signed)).status,402);assert.equal(settles,0);assert.equal(Object.keys(data.agentPayments||{}).length,0,'Unverified payments must not fill the durable ledger');valid=true;confirmed=false;const pending=await request(signed);assert.equal(pending.status,503);assert.equal(pending.body.intent,undefined);assert.equal(settles,1);
+confirmed=true;const paid=await request(signed);assert.equal(paid.status,200);assert.equal(paid.body.intent.amount,12000);assert.equal(settles,2);assert.equal(seen[0],seen[1]);assert.equal((await request(signed)).status,200);assert.equal(settles,2,'Cached retries must not settle again');
+assert.equal((await request(signed,url.replace(requestId,randomUUID()))).status,400,'A receipt cannot buy another resource');
+const body={merchant:'Offline merchant',price:'110',deliveryDate:cart.deliveryDate,returns:'30 days',minutes:15,exactMatch:true,conditionsAccepted:true};const offerURL=url.replace('?requestId=','/offers?requestId=');const offer=await request(signed,offerURL,'POST',body);assert.equal(offer.status,201);assert.equal((await request(signed,offerURL,'POST',body)).body.offer.id,offer.body.offer.id);assert.equal(cart.offers.length,1);assert.equal((await request(signed,offerURL,'POST',{...body,price:'109'})).status,409);
+const text=JSON.stringify([paid.body,challenge.body,(await service.handle({url:'/api/agent',method:'GET',headers:{}})).body]);for(const secret of ['PRIVATE_OWNER','PRIVATE_CARD_FINGERPRINT','PRIVATE_RECEIPT','123456789'])assert.equal(text.includes(secret),false);
+const cloud={carts:{},merchant:newMerchantState()};ingestIntent(cloud,{cart});assert.equal(cloud.carts[cart.id].owner,undefined);assert.equal(cloud.carts[cart.id].privateDemandKey,undefined);cart.status='released';cart.visaStatus='REVERSED';ingestIntent(cloud,{cart});assert.equal(cloud.carts[cart.id].status,'released');assert.throws(()=>ingestIntent(cloud,{cart:{...cart,status:'authorized',visaStatus:'AUTHORIZED'}}),/reactivated/);assert.equal((await request(signed)).body.activeNow,false);assert.equal((await request(null,url.replace(requestId,randomUUID()))).status,410);assert.equal(settles,2);
+const unavailable=createAgentPayments({db,payTo,origin:'http://localhost:4318',facilitator,checkRecipient:async()=>false});assert.equal((await unavailable.metadata()).available,false);
+console.log('PASS: offline x402 V2 transport, exact devnet USDC terms, resource binding, failed verification, confirmed-only delivery, durable same-payment retries, cached fulfillment, paid offer submission, private data filtering and trusted intent feed. No network settlement claimed.');

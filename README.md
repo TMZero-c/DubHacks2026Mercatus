@@ -67,14 +67,54 @@ Both integrations use the existing Visa Acceptance sandbox credentials server-si
 
 API references: [TMS](https://developer.visaacceptance.com/docs/vas/en-us/tms/developer/all/rest/tms.html), [Transaction Search and Details](https://developer.visaacceptance.com/docs/vas/en-us/txn-search/developer/all/rest/txn-search.html).
 
-## Proposed Visa + Solana architecture — not deployed
+## Solana offer compute engine
 
-The useful onchain feature is a **merchant-funded USDC reward for choosing an offer**. For example, a merchant locks a $5 reward with a firm offer. The shopper approves the purchase through the card checkout; after authenticated purchase confirmation, the program releases that merchant-funded reward. Expired or cancelled offers return unused funds under explicit rules. Selecting an offer in this prototype is not purchase confirmation and must never trigger a payout.
+The optional **Solana devnet** campaign engine executes merchant quote rules inside a native Solana program. Visa Acceptance still verifies the card authorization offchain. Later's trusted attestor registers a time-limited intent; the program calculates a price, reserves shared merchant stock and daily incentives, and records selection and release. It adds no waiting reward or commission payment. Selecting an offer is not a purchase, capture, or settlement.
 
-Keep private product baskets, personal information, search, matching, Visa requests and reconciliation in a conventional API, database and durable queue. Use a Solana program for reward escrow and single-use offer acceptance/settlement. Give each intent/offer its own program-derived account; avoid a single global writable counter or vault. Store an opaque, salted commitment to terms, expiration, permitted participants and settlement state. Keep payment identifiers, card fingerprints, addresses, raw cart contents and API credentials offchain.
+Campaigns publish list prices, minimum prices, inventory, seller-rule hashes, and incentive limits. Cost and gross-margin inputs stay in the payment service; the service derives each minimum price before publication. The program enforces that floor and the remaining budget when it calculates each quote. Product hashes and timing are public and can be guessed from known catalog information; they are not encrypted. The merchant must explicitly opt in to publishing **test** policy data. No card data, Visa identifiers, billing information, credentials, or customer names go onchain.
 
-Solana programs cannot call the Visa HTTP API. A narrowly scoped Later attestor would verify an authenticated final payment event and submit an idempotent completion instruction. That is trust in Later's attestor, not a Visa-signed onchain proof. The design must bind offer, shopper payout wallet, amount, mint and deadlines, reject replay/double payout, and define cancellation/refund/dispute handling. Never treat a reporting receipt or an expiring authorization as final settlement. A card authorization at Later also cannot simply be transferred to an unrelated winning merchant.
+The program uses separate policy, intent, quote, and merchant/product stock accounts. Stock is shared across that merchant's campaigns to prevent duplicate reservation. It enforces expiry, a single selection, seller and delivery constraints, and the best available quote ceiling. The API only publishes a Solana offer after confirmed execution and account readback. Failed or uncertain confirmation does not fall back to a locally calculated offer. Publication, selection, and release can be retried. When the Visa backing becomes inactive, the worker revokes the onchain intent and releases its reservations. Selecting an API offer also revokes an outstanding Solana intent. These changes require confirmed worker transactions; until they land, the existing onchain expiry is the upper bound. Policy and intent account rent currently remains allocated; this prototype needs a cleanup lifecycle and a production audit before mainnet.
 
-Start on ordinary Solana devnet with a standard program. 100,000 events/day averages 1.16 events/second; 100,000/hour averages 27.8. Peak traffic, account contention, RPC/indexing, storage rent and fees need measurement. A private SVM/ephemeral rollup is a later option if measured requirements justify its extra operation and trust assumptions. The current JSON-file/whole-Blob storage is also a demo constraint and needs replacement before this volume.
+Build and verification:
 
-[Solana Attestations](https://solana.com/docs/tools/attestations) is a possible shared receipt registry; it is not escrow. Visa already supports USDC settlement on Solana for participating institutions, but our sandbox credentials do not grant access to that institutional settlement program. [Visa's announcement](https://usa.visa.com/about-visa/newsroom/press-releases.releaseId.21951.html).
+```sh
+npm run build:solana
+npm run test:solana
+npm run deploy:solana
+```
+
+The build script creates private test keypairs under ignored `.local/solana-market/` and sends only the Rust program source plus the public attestor address to the official Solana Playground compiler. Its cached toolchain may differ from the local Cargo lockfile. `test:solana` loads the compiled ELF into LiteSVM and executes signed Solana transactions; this is offline VM verification, not a devnet deployment. `deploy:solana` requires the official Solana CLI and enough free devnet SOL, then verifies the deployed binary before writing deployment metadata. All scripts are fixed to devnet. Never fund these wallets with mainnet assets.
+
+The local payment service exposes the optional campaign engine when real devnet deployment metadata exists. The hosted Vercel merchant MCP does not hold chain or Visa private keys and rejects Solana campaigns. Its ordinary API campaigns remain supported. Matching, search, card handling, and reconciliation stay offchain. This is a shared executable pricing policy, not a claim that Solana replaces every backend service or can call Visa HTTP APIs.
+
+The attestor and program upgrade authority remain trusted in this prototype. Each merchant currently uses the local operator's test wallet. Separate merchant wallet onboarding, durable transaction jobs, confidential execution, account cleanup, and load testing are future work. No throughput claim or private SVM/rollup deployment is implied.
+
+## Paid agent access on the Solana chain (x402 V2)
+
+Merchants' agents can buy one current, published Visa-backed cart snapshot for **0.001 test USDC on Solana devnet**. `GET /api/agent` lists product identities and resource URLs without exposing the cart budget, card identifiers, or shopper identity. Request an intent resource with a unique UUID `requestId`; the API returns an x402 V2 `PAYMENT-REQUIRED` header. The official Solana client signs the exact USDC amount, the public x402 testnet facilitator verifies and settles it, and Later checks Solana confirmation before returning the snapshot and `PAYMENT-RESPONSE` receipt. No custom Solana program deployment is required for this payment route.
+
+The facilitator sponsors transaction fees. The recipient's USDC associated token account must already exist. Discovery advertises payments only after checking that account and the facilitator's exact V2/devnet support. The API accepts only the devnet USDC mint and network; there is no automatic mainnet mode. The recipient address is public configuration (`LATER_X402_PAY_TO`), not a server signing key.
+
+A paid agent can submit one offer at the snapshot's `offerEndpoint`, using the same `requestId` and original `PAYMENT-SIGNATURE`. This does not charge another fee or buy the product. Repeated identical offers return the original offer; changed terms under the same purchase are rejected. Existing authenticated merchant MCP tools remain an administrative workspace interface.
+
+Payment retries must reuse the same request ID **and signed transaction**. The private ledger binds that payment to one resource, stores confirmed fulfillment, and lets a retry recover its original receipt without authorizing a second payment. An uncertain settlement returns no cart. A closed intent rejects new purchases; a previously completed purchase can retrieve its dated snapshot with `activeNow: false`. A hold qualifies interest, not a guaranteed eventual purchase.
+
+The local Visa payment service can sync its own confirmed, consented sandbox intents to the hosted API using server-only `LATER_HOSTED_ACCESS_KEY`. The hosted ingress is authenticated Later attestation, not an independently verified Visa signature. It receives no PAN, CVV, billing address, TMS fingerprint, or Visa API credential. It keeps the authorization reference private and excludes it from paid responses. Merchant offers sync back to the local extension, and selection/release updates close the hosted intent. The sync worker must remain running; expiry also bounds availability.
+
+A test-agent client persists its signed request under an ignored private directory before submitting payment:
+
+```sh
+node outputs/agent-payments/buy.mjs \
+  https://later-merchant-mcp.vercel.app/api/agent/intents/INTENT_UUID \
+  /absolute/path/to/test-agent-keypair.json \
+  /absolute/path/to/.local/purchase.json \
+  EXPECTED_PUBLIC_RECIPIENT_ADDRESS
+```
+
+The client is restricted to Later's local/hosted origins, the Solana devnet USDC mint, the expected recipient, and exactly 0.001 test USDC. Reuse that private request file for retries. `npm run test:x402` uses explicitly offline facilitator fixtures for failure, replay, privacy, and persistence checks; it does not claim a network settlement.
+
+**Visa and revenue:** the USDC micropayment goes to the API operator, not to Visa. Visa's role here is card-backed intent qualification and the card commerce the marketplace can generate. This prototype authorizes and reverses in the Visa sandbox; it does not charge a real card or complete the winning merchant's purchase. Visa's institutional USDC settlement offering on Solana is a separate issuer/acquirer integration, not something enabled by these sandbox keys. A production launch needs merchant card checkout plus the appropriate payment partners, and a production facilitator/network configuration rather than switching this demo to mainnet.
+
+References: [Solana x402 V2](https://solana.com/docs/payments/agentic-payments/x402), [x402 facilitator](https://github.com/x402-foundation/x402/blob/main/docs/core-concepts/facilitator.md), [Visa USDC settlement on Solana](https://usa.visa.com/about-visa/newsroom/press-releases.releaseId.21951.html).
+
+Live verification completed on Solana devnet: a real Visa Acceptance sandbox authorization qualified the cart; an agent paid 0.001 test USDC; the offer returned to the local shopper and was selected; the Visa authorization was then reversed. An identical retry returned the original receipt. [Confirmed Solana transaction](https://explorer.solana.com/tx/4jYNLQrFKD3kwfBQBieYrBvJezLNAWjxKvMaXkNTsyqFbxAJ2YRJekLGbmehGeGYEjK2UNQ595u2hK6optWd16HJ?cluster=devnet). RPC token balances showed exactly −1,000/+1,000 base units between the two distinct project wallets. No production assets were used.

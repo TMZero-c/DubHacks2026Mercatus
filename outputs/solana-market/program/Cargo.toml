@@ -1,0 +1,12 @@
+[package]
+name = "later-market-compute"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+[lib]
+crate-type = ["cdylib", "lib"]
+[dependencies]
+solana-program = "=2.3.0"
+borsh = { version = "1.5.7", features = ["derive"] }
+[features]
+no-entrypoint = []
