@@ -13,3 +13,12 @@ coverage/
 
 **/target/
 **/*-keypair.json
+
+**/.local/
+**/node_modules/
+**/target/
+**/*-keypair.json
+
+node_modules
+**/node_modules
+work/.tmp-*

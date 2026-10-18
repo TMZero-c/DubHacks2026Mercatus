@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Later",
-  "short_name": "Later",
+  "name": "Mercatus",
+  "short_name": "Mercatus",
   "description": "Review your cart and compare merchant offers.",
   "start_url": "/",
   "scope": "/",

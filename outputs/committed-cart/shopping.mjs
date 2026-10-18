@@ -44,10 +44,19 @@ export function createShoppingSearch({apiKey,fetcher=fetch,now=()=>Date.now(),ca
  if(file){try{const saved=JSON.parse(readFileSync(file,'utf8'));if(saved.version===3){for(const [key,value]of saved.entries||[])if(now()-value.time<3600000)cache.set(key,value);windowStart=saved.windowStart||now();calls=saved.calls||0;}}catch{}}
  function persist(){if(!file)return;try{mkdirSync(dirname(file),{recursive:true,mode:0o700});for(const [key,value]of cache)if(now()-value.time>=3600000)cache.delete(key);while(cache.size>200)cache.delete(cache.keys().next().value);writeFileSync(file+'.tmp',JSON.stringify({version:3,windowStart,calls,entries:[...cache]}),{mode:0o600});renameSync(file+'.tmp',file);}catch{}}
 
- return async body=>{
+ const search=async body=>{
   const query=validateSearch(body),key=query.toLowerCase();if(!apiKey)throw new Error('Price comparison is not configured. Add SERPAPI_API_KEY to the backend .env.');
   const previous=cache.get(key);if(previous&&now()-previous.time<3600000)return{...previous.result,cached:true};if(pending.has(key))return pending.get(key);
   if(now()-windowStart>=3600000){windowStart=now();calls=0;}if(calls>=20)throw new Error('Local demo search limit reached (20 per hour). Cached searches remain available.');calls++;persist();
   const job=(async()=>{try{const url=new URL('https://serpapi.com/search.json');url.search=new URLSearchParams({engine:'google_shopping',q:query,gl:'us',hl:'en',api_key:apiKey}).toString();const response=await fetcher(url,{redirect:'error',signal:AbortSignal.timeout(25000)});if(!response.ok)throw new Error('Provider request failed');const data=await response.json();if(data.error)throw new Error('Provider search error');const result=normalizeShopping(data,query,new Date(now()).toISOString());cache.set(key,{result,time:now()});persist();return{...result,cached:false};}catch{throw new Error('Price search failed. Check SerpApi quota and account status, then try again. No payment was sent.');}finally{pending.delete(key)}})();pending.set(key,job);return job;
  };
+ // Read-only bridge for assistant context after a server restart. Public cached
+ // listings need no provider call, active credential or quota consumption.
+ search.peek=body=>{
+  let query;try{query=validateSearch(body);}catch{return null;}
+  const previous=cache.get(query.toLowerCase()),age=previous?now()-previous.time:NaN;
+  if(!previous||!Number.isFinite(age)||age<0||age>=3600000||!previous.result)return null;
+  return structuredClone({...previous.result,cached:true});
+ };
+ return search;
 }

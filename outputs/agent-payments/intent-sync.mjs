@@ -1,6 +1,6 @@
 import {verify,validateOffer} from '../committed-cart/engine.mjs';
 const ENDPOINT='https://later-merchant-mcp.vercel.app/api/agent/ingest';
-const fields=['id','environment','status','authorizationId','authorizedAmount','visaStatus','amount','currency','condition','sellers','deliveryDate','expiresAt','digest','published','items','createdAt','authorizedAt','purchaseApproval','selectedOfferId','selectedAt'];
+const fields=['id','environment','status','authorizationId','authorizedAmount','visaStatus','amount','currency','condition','shoppingTerms','sellers','deliveryDate','expiresAt','digest','published','items','createdAt','authorizedAt','purchaseApproval','selectedOfferId','selectedAt'];
 export function createIntentSync({carts,save,key=process.env.LATER_HOSTED_ACCESS_KEY,fetchImpl=fetch}){
  let running=false;const closed=new Map();
  return async()=>{if(!key||running)return;running=true;try{

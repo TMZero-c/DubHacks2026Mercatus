@@ -18,6 +18,12 @@ class Reader{
 export function decodeQuote(data){const r=new Reader(data);if(r.n(1)!==4)throw new Error('Not a marketplace quote');return{policy:r.key(),intent:r.key(),operator:r.key(),amount:r.n(),incentiveCents:r.n(),day:r.n(8,true),expires:r.n(8,true),status:r.n(1),units:r.items()};}
 export function decodePolicy(data){const r=new Reader(data);if(r.n(1)!==1)throw new Error('Not a marketplace policy');const merchant=r.key(),id=r.key(),dailyBudgetCents=r.n(),maxIncentiveCents=r.n(),fixedDiscount=!!r.n(1),deliveryDays=r.n(2),offerSeconds=r.n(4),end=r.n(8,true),sellerCount=r.n(4);if(sellerCount>10)throw new Error('Invalid seller rules');const sellers=Array.from({length:sellerCount},()=>r.key()),active=!!r.n(1),usageCount=r.n(4);if(usageCount>3)throw new Error('Invalid policy usage');r.take(usageCount*16);const outstanding=r.n(4),count=r.n(4);if(count>200)throw new Error('Invalid policy products');return{merchant,id,dailyBudgetCents,maxIncentiveCents,fixedDiscount,deliveryDays,offerSeconds,end,sellers,active,outstanding,products:Array.from({length:count},()=>({hash:r.key(),list:r.n(),floor:r.n()}))};}
 export function listingFloor(p,c){return Math.max(Math.ceil(p.unitCents*(100-c.discountPct)/100),Math.ceil(p.costCents*100/(100-c.minMarginPct)));}
+function shopperPriceLimit(cart){
+ if(!cart.shoppingTerms)return cart.amount;
+ const {maxTotalCents,minimumSavingsCents}=cart.shoppingTerms;
+ if(!Number.isSafeInteger(maxTotalCents)||maxTotalCents<1||maxTotalCents>cart.amount||!Number.isSafeInteger(minimumSavingsCents)||minimumSavingsCents<0||minimumSavingsCents>=cart.amount)throw new Error('Invalid shopper price terms.');
+ return Math.min(maxTotalCents,cart.amount-minimumSavingsCents);
+}
 export async function openMarket({directory,fetchImpl=fetch,deploymentFile='deployment.json'}){
  const read=async name=>JSON.parse(await readFile(new URL(name,directory),'utf8'));
  const deployment=await read(deploymentFile);
@@ -62,16 +68,23 @@ export async function openMarket({directory,fetchImpl=fetch,deploymentFile='depl
  }
  async function setActive(c,active){const policy=await policyAddress(c);return send(Buffer.from([2,Number(active)]),[signerMeta(merchant),w(policy)]);}
  async function registerIntent(c){
+  // The current optional program has a 12-hour limit plus 60 seconds of clock
+  // drift. Normal server merchant campaigns also support the 24-hour wait.
+  if(Date.parse(c.expiresAt)>Date.now()+12*3600000+60000)throw new Error('The current Solana program supports waits of up to 12 hours. Use the server merchant engine for a 24-hour wait.');
   const intent=await intentAddress(c);if(await account(intent))return{intent};
   const data=Buffer.concat([u(3,1),intentCommitment(c),u(c.amount),u(Math.floor(Date.parse(c.expiresAt)/1000),8,true),u(Math.floor(Date.parse(c.deliveryDate)/86400000),8,true),sellerHash(c.sellers),vec(cartUnits(c).map(i=>Buffer.concat([i.hash,u(i.quantity,4)])))]);
   const signature=await send(data,[signerMeta(attestor),w(intent),meta(SYSTEM)],attestor);return{intent,signature};
  }
  async function computeQuote(c,cart){
+  const priceLimit=shopperPriceLimit(cart);
   const policy=await policyAddress(c),{intent}=await registerIntent(cart),quote=await quoteAddress(policy,intent);const prior=await account(quote);
   let signature=null;
-  if(!prior){const best=Math.min(cart.amount,...(cart.offers||[]).filter(o=>Date.parse(o.expiresAt)>Date.now()&&o.snapshotHash===cart.digest).map(o=>o.amount));signature=await send(Buffer.concat([u(4,1),u(best)]),[signerMeta(merchant),w(policy),w(intent),w(quote),meta(SYSTEM),...await Promise.all(cartUnits(cart).map(async i=>w(await stockAddress(i.hash))))]);}
+  // The program requires amount < ceiling. Add one cent so an offer exactly at
+  // the shopper's inclusive maximum remains valid without weakening that limit.
+  if(!prior){const best=Math.min(cart.amount,priceLimit+1,...(cart.offers||[]).filter(o=>Date.parse(o.expiresAt)>Date.now()&&o.snapshotHash===cart.digest).map(o=>o.amount));signature=await send(Buffer.concat([u(4,1),u(best)]),[signerMeta(merchant),w(policy),w(intent),w(quote),meta(SYSTEM),...await Promise.all(cartUnits(cart).map(async i=>w(await stockAddress(i.hash))))]);}
   const record=await account(quote);if(!record||record.owner!==programId)throw new Error('No confirmed Solana quote');const value=decodeQuote(record.data);if(value.status!==1||value.expires*1000<=Date.now())throw new Error('Solana quote is no longer open');
   if(!value.policy.equals(await keyBytes(policy))||!value.intent.equals(await keyBytes(intent))||!value.operator.equals(await keyBytes(merchant.address))||!Number.isSafeInteger(value.amount)||value.amount<=0||value.amount>cart.amount)throw new Error('Solana quote does not match the requested cart');
+  if(value.amount>priceLimit)throw new Error('Solana quote exceeds the shopper price terms.');
   return{...value,receipt:{cluster:'devnet',programId,policy,intent,quote,signature,computedOn:'Solana SVM',confirmedAt:new Date().toISOString()}};
  }
  async function select(receipt){const a=await account(receipt.intent);if(!a||a.owner!==programId)throw new Error('Unknown Solana intent');const r=new Reader(a.data);if(r.n(1)!==3)throw new Error('Invalid Solana intent');r.take(32+8+8+8+32);r.items();const count=r.n(4);if(count>30)throw new Error('Invalid intent quote count');r.take(count*49);const chosen=r.key();if(chosen.equals(await keyBytes(receipt.quote)))return null;if(chosen.some(x=>x!==0))throw new Error('Another quote is already selected');return send(Buffer.from([5]),[signerMeta(attestor),w(receipt.intent),meta(receipt.quote)],attestor);}
