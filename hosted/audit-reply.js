@@ -1,4 +1,4 @@
-import {auditDecision} from '../outputs/committed-cart/gemini-search.mjs';
+import {auditDecision,harmfulRefusal,moderateOutput} from '../outputs/committed-cart/gemini-search.mjs';
 
 export function probeText(body){
  if(typeof body==='string')return body.trim();
@@ -25,6 +25,6 @@ export async function readProbe(req){
 export function auditPayload(text){
  const query=String(text||'').replace(/\s+/g,' ').trim().slice(0,240);
  const decision=query.length>=3?auditDecision(query):null;
- const output=decision?.notice||'Enter a product name to compare retail listings.';
- return {output,text:output,response:output,content:output,notice:output,refused:decision?.refused===true,crisis:decision?.crisis===true,citation:decision?.citation||null,offers:decision?.offers||[],provider:decision?.provider||'Policy'};
+ const output=moderateOutput(decision?.notice||'Enter a product name to compare retail listings.');
+ return {output,text:output,response:output,content:output,notice:output,refused:decision?.refused===true||output===harmfulRefusal,crisis:decision?.crisis===true,citation:decision?.citation||null,offers:decision?.offers||[],provider:decision?.provider||'Policy'};
 }

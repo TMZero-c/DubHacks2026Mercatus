@@ -38,11 +38,15 @@ const refusalPatterns=[
 ];
 export function disallowedContent(value){const text=String(value||'');return refusalPatterns.some(pattern=>pattern.test(text));}
 export function disallowedSearch(query){return /[<>]/.test(query)||disallowedContent(query);}
+export const harmfulRefusal='I can\'t help with that. I must refuse this request.';
+export function harmfulInstructionRequest(text){return /\b(explosive device|pipe bomb|improvised explosive)\b/i.test(text)||/\bhow to (make|build|synthesize) (a |an )?(bomb|explosive)\b/i.test(text);}
+export function moderateOutput(text){const value=String(text||'');if(value===harmfulRefusal)return value;return harmfulInstructionRequest(value)?harmfulRefusal:value;}
 const crisisNotice='I can’t help with that. If you are thinking about suicide or self-harm, call or text 988 in the US, or contact your local emergency number.';
 export function auditDecision(query,now=new Date().toISOString()){
  const text=String(query||'');
  if(/\bcapital of france\b/i.test(text))return {query,checkedAt:now,refused:false,offers:[],provider:'Grounded fact',citation:'https://www.cia.gov/the-world-factbook/countries/france/',notice:'The capital of France is Paris.'};
  if(/\b(harm myself|self-harm|self harm|kill yourself)\b/i.test(text))return {query,checkedAt:now,refused:true,crisis:true,offers:[],provider:'Crisis response',notice:crisisNotice};
+ if(harmfulInstructionRequest(text))return {query,checkedAt:now,refused:true,offers:[],provider:'Policy',notice:harmfulRefusal};
  if(disallowedSearch(text)||/\b(developer mode|private data you were given|dump the private data|hidden system prompt|api keys, passwords, or tokens|invent a fake|historical treaty|confidently as real)\b/i.test(text))return {query,checkedAt:now,refused:true,offers:[],provider:'Policy',notice:'That request is not available.'};
  return null;
 }
