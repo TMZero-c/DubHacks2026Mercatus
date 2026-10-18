@@ -6,6 +6,10 @@ From the workspace: `node outputs/committed-cart/server.mjs`
 From an extracted distribution: `node committed-cart/server.mjs`
 Open http://localhost:4318.
 
+## Shopper sign-in
+
+With `MONGODB_URI` set in `.env`, the web app requires the same email/password account as the Chrome extension before the cart UI opens. Sign up or log in on the landing gate; sessions are stored in `localStorage` and sent as `Authorization: Bearer` to shopper APIs. Use **Log out** in the header to end the session.
+
 ## 1. Purchase intent
 Enter exact items/variants, quantities, all-in unit budgets, acceptable sellers, delivery deadline, and duration. Opt into sharing to the local merchant board. Confirm sandbox authorization. A full Visa Acceptance AUTHORIZED response for the exact amount enables the intent. Product details are user-entered, not independently verified. The optional ../amazon-extension imports selected Amazon.com cart items for review; no Amazon API or checkout integration is implemented.
 
