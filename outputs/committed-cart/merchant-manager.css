@@ -80,3 +80,33 @@
 #merchantDealForm{padding:0}
 @media(max-width:1100px){.merchant-heading{align-items:flex-start;flex-direction:column}.merchant-metrics{grid-template-columns:repeat(2,1fr)}#merchantView{padding:34px 28px 44px}}
 @media(max-width:600px){#merchantView{padding:26px 16px 32px}.merchant-heading{gap:20px}.merchant-heading-copy{gap:12px}.merchant-heading-bag{width:56px;height:56px}#merchantView h1{font-size:30px!important;letter-spacing:-.05em}.merchant-heading p{font-size:13px}.merchant-actions{gap:8px}.merchant-actions .m-btn{font-size:12px;padding:9px 12px}.merchant-metrics{gap:10px;margin-bottom:24px}.merchant-metrics>div{padding:16px 46px 16px 14px}.merchant-metrics span{font-size:11px}.merchant-metrics strong{font-size:26px}.metric-bag{width:30px;height:30px;right:12px}.merchant-tabs{gap:24px;padding:0 16px}.merchant-tabs button{font-size:13px}.merchant-controls{padding:12px 14px}.merchant-controls input,.merchant-controls select{font-size:12px}.merchant-controls .m-btn{font-size:12px;padding:9px 12px}.merchant-dialog{padding:20px}.dialog-heading h2{font-size:23px}.dialog-heading p{font-size:12px}.merchant-deal-section{padding:20px}.deal-heading-copy{gap:8px}.deal-heading-copy .section-bag{width:38px;height:38px}.deal-heading-copy h2{font-size:21px}.merchant-deal-section .dialog-heading{flex-wrap:wrap}.merchant-pass-row{flex-wrap:wrap}.merchant-pass-row>span{flex-basis:100%}.merchant-pass-row input{flex:1;max-width:none}.merchant-deal-drop>span{flex-basis:100%}.merchant-empty{padding:34px 20px 40px}}
+
+/* Incoming customer requests stay distinct from merchant campaigns and sent offers. */
+.waiting-product+.waiting-product{margin-top:12px;padding-top:10px;border-top:1px solid #ece8e1}
+.waiting-budget strong,.waiting-time strong{display:block;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums}
+.waiting-budget span,.waiting-time span,.waiting-time time{display:block;font-size:12px;color:#858780;margin-top:4px}
+.merchant-tabs{overflow-x:auto}.merchant-tabs button{white-space:nowrap;flex-shrink:0}
+
+.waiting-product{display:flex;align-items:center;gap:12px}
+.waiting-product-image{width:64px;height:64px;object-fit:contain;flex:none;border:1px solid #ece8e1;border-radius:10px;background:#fff}
+.waiting-product-image.is-placeholder{padding:10px;background:#faf8f4;border-color:transparent}
+
+@media(max-width:1000px){
+ .waiting-table-scroll{overflow:visible}
+ .waiting-table{display:block;width:100%}
+ .waiting-table thead{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+ .waiting-table tbody{display:block;padding:0 20px 20px}
+ .waiting-table tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 24px;padding:20px;border:1px solid #e5e1d9;border-radius:12px;background:#fffdf9}
+ .waiting-table tbody tr+tr{margin-top:14px}
+ .waiting-table tbody tr:last-child{border:1px solid #e5e1d9}
+ .waiting-table td{display:block;height:auto;min-width:0;max-width:none;padding:0;border:0;white-space:normal;overflow-wrap:anywhere}
+ .waiting-table td[data-label]::before{content:attr(data-label);display:block;color:#858780;font-size:11px;font-weight:800;margin-bottom:7px}
+ .waiting-table .waiting-products,.waiting-table .waiting-action{grid-column:1/-1;min-width:0;max-width:none}
+ .waiting-table .waiting-products{padding-bottom:16px;border-bottom:1px solid #ece8e1}
+ .waiting-table .waiting-product>div{min-width:0}
+ .waiting-table .waiting-product strong{font-size:15px}
+ .waiting-table .waiting-action button{width:100%;min-height:44px}
+ .waiting-table .waiting-delivery{font-weight:900;color:var(--ink)}
+ .waiting-table .waiting-offers .m-pill{font-size:13px}
+}
+@media(max-width:600px){.waiting-table tbody{padding:0 14px 14px}.waiting-table tbody tr{padding:16px;gap:16px}}
