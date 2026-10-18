@@ -6,7 +6,7 @@
   try{
    fields.forEach(f=>f.dispose());fields=[];microform=null;
    document.getElementById('cardNumber').replaceChildren();document.getElementById('cardCvv').replaceChildren();
-   const response=await fetch('/api/card-session',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const data=await response.json();if(!response.ok)throw new Error(data.error);
+   const response=await fetch('/api/card-session',{method:'POST',headers:{'Content-Type':'application/json',...(window.laterAuthHeaders?.()||{})},body:'{}'});const data=await response.json();if(!response.ok)throw new Error(data.error);
    await new Promise((resolve,reject)=>{const script=document.createElement('script');const timer=setTimeout(()=>reject(new Error('Visa took too long to load. Click Retry secure card entry.')),15000);script.src=data.clientLibrary;script.integrity=data.clientLibraryIntegrity;script.crossOrigin='anonymous';script.onload=()=>{clearTimeout(timer);resolve()};script.onerror=()=>{clearTimeout(timer);reject(new Error('Visa SDK failed to load. Check your connection and retry.'))};document.head.append(script)});
    microform=new Flex(data.captureContext).microform({styles:{input:{'font-size':'16px',color:'#16171b'}}});
    fields=[microform.createField('number',{placeholder:'4111 1111 1111 1111'}),microform.createField('securityCode',{placeholder:'123'})];

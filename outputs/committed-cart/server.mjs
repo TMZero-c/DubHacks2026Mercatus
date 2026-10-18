@@ -15,7 +15,7 @@ const shoppingEnv=new URL('.env',root);if(existsSync(shoppingEnv))process.loadEn
 const shoppingSearch=createShoppingSearch({apiKey:process.env.SERPAPI_API_KEY,cacheFile:new URL('.local/shopping-cache.json',root)});
 const userAuth=createUserAuth();
 const config={merchant:process.env.VISA_MERCHANT_ID,key:process.env.VISA_KEY_ID,secret:process.env.VISA_SHARED_SECRET};
-const shopperAuthPaths=new Set(['/api/state','/api/compare','/api/commit','/api/commit-test-card','/api/select','/api/release']);
+const shopperAuthPaths=new Set(['/api/state','/api/compare','/api/commit','/api/commit-test-card','/api/select','/api/release','/api/card-session']);
 await mkdir(stateDir,{recursive:true,mode:0o700});let carts={},merchantState=newMerchantState();try{const stored=JSON.parse(await readFile(stateFile,'utf8'));if(stored.format===2){carts=stored.carts;merchantState=stored.merchant;}else carts=stored;}catch(e){if(e.code!=='ENOENT')throw e;}
 for(const cart of Object.values(carts))if(['authorizing','reversing'].includes(cart.status)){cart.status='needs_review';cart.message='Server restarted during a payment request. Check the sandbox portal.';}
 let saveQueue=Promise.resolve();function save(){const data=JSON.stringify({format:2,carts,merchant:merchantState},null,2);saveQueue=saveQueue.then(async()=>{await writeFile(new URL('state.tmp',stateDir),data,{mode:0o600});await rename(new URL('state.tmp',stateDir),stateFile)});return saveQueue;}await save();
@@ -39,10 +39,13 @@ const port=Number(process.env.LATER_PORT||4318);http.createServer(async(req,res)
   return send(404,{error:'Not found'});
  }
  let authUser=null;
- if(isExtension&&shopperAuthPaths.has(url.pathname)){
-  if(!userAuth.configured())return send(503,{error:'Sign-in is unavailable. Add MONGODB_URI to the local app .env.'});
-  authUser=await userAuth.userFromBearer(req.headers.authorization);
-  if(!authUser)return send(401,{error:'Sign in to continue.'});
+ if(shopperAuthPaths.has(url.pathname)){
+  if(userAuth.configured()){
+   authUser=await userAuth.userFromBearer(req.headers.authorization);
+   if(!authUser)return send(401,{error:'Sign in to continue.'});
+  }else if(isExtension){
+   return send(503,{error:'Sign-in is unavailable. Add MONGODB_URI to outputs/committed-cart/.env, then restart npm start.'});
+  }
  }
  let token=(req.headers.cookie||'').match(/(?:^|; )cart_session=([a-f0-9]{64})(?:;|$)/)?.[1];if(!token){token=randomBytes(32).toString('hex');headers['Set-Cookie']=`cart_session=${token}; HttpOnly; SameSite=Strict; Path=/`;}
  const owner=authUser?authUser.id:createHash('sha256').update(token).digest('hex');const owned=()=>Object.values(carts).filter(c=>c.owner===owner).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));const publicCart=c=>{const {owner,exchange,...rest}=c;return{...rest,offers:(c.offers||[]).filter(o=>o.source!=='openrtb-demo').map(({submittedBy,...o})=>o),verification:verify(c)}};

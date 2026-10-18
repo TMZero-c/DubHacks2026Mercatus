@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {validateCart} from './engine.mjs';
-const root=dirname(fileURLToPath(import.meta.url)),dir=await mkdtemp(join(tmpdir(),'later-merchant-qa-')),port=4326,base='http://127.0.0.1:'+port,env={...process.env,LATER_STATE_DIR:dir,LATER_PORT:String(port)};
+const root=dirname(fileURLToPath(import.meta.url)),dir=await mkdtemp(join(tmpdir(),'later-merchant-qa-')),port=4326,base='http://127.0.0.1:'+port,env={...process.env,LATER_STATE_DIR:dir,LATER_PORT:String(port),MONGODB_URI:''};
 const cookie='a'.repeat(64),now=Date.now();const cart=validateCart({items:[{name:'Test headphones',variant:'Black · New',price:'150',quantity:1}],hours:12,sellers:'Authorized retailers only',deliveryDate:new Date(now+7*86400000).toISOString().slice(0,10),publish:true,consent:true},now);Object.assign(cart,{status:'authorized',offers:[],owner:createHash('sha256').update(cookie).digest('hex')});await writeFile(join(dir,'state.json'),JSON.stringify({[cart.id]:cart}),{mode:0o600});
 let server,logs='';function start(){server=spawn(process.execPath,[join(root,'server.mjs')],{env,stdio:['ignore','pipe','pipe']});server.stdout.on('data',x=>logs+=x);server.stderr.on('data',x=>logs+=x);return server;}
 async function ready(){for(let i=0;i<80;i++){try{if((await fetch(base+'/api/state')).ok)return;}catch{}if(server.exitCode!==null)throw new Error(logs);await new Promise(r=>setTimeout(r,100));}throw new Error('Local test server did not start. '+logs);}
