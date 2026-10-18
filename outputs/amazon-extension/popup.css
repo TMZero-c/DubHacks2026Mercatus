@@ -2,3 +2,17 @@
 body.has-deal .product,body.multiple .product,body.has-message .product{height:80px}body.has-deal .product-image,body.multiple .product-image,body.has-message .product-image{height:80px;width:80px}body.has-deal .price-line{margin:10px 0 8px}body.multiple.has-deal .section-heading{margin-bottom:10px}body.has-message .message{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.offer p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .better-deal>span:first-child>strong,.better-deal #dealDetail{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.better-deal>strong{white-space:nowrap}.better-deal{min-height:58px;max-height:58px}.pagination button:disabled{cursor:default}
 .history-item{display:block;width:100%;padding:17px 0;border:0;border-bottom:1px solid var(--line);background:white;text-align:left;color:var(--ink)}.history-item strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:16px;font-weight:600}.history-item span{display:block;color:var(--muted);font-size:14px;margin-top:7px}.history-item:hover strong{color:var(--accent)}.history-empty{color:var(--muted);font-size:15px;margin-top:32px}
+#headerActions{display:flex;align-items:center;gap:12px}
+.auth{height:100%;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;text-align:center;gap:8px;padding:0 4px 18px;overflow:auto}
+.auth .empty-shape{width:64px;height:64px;font-size:30px;border-radius:18px;margin:0 auto;flex-shrink:0}
+.auth .empty-shape span{right:14px;bottom:8px}
+.auth h1{font-size:24px;margin-top:2px}
+.auth p{max-width:290px;font-size:14px;color:var(--muted);margin:0 auto 4px}
+.auth form{width:100%;text-align:left;margin-top:8px}
+.auth label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px}
+.auth input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:10px;font:inherit;color:var(--ink);background:#fff}
+.auth input:focus{border-color:#b8c7f5;box-shadow:0 0 0 3px #2456f522;outline:none}
+.auth .primary{margin-top:18px}
+.auth #authToggle{margin-top:8px;text-align:center}
+body.auth-only header .wordmark{pointer-events:none}
+body.auth-only main{padding-top:28px}

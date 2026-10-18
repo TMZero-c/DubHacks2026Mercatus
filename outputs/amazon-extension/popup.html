@@ -1,11 +1,24 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Later</title><link rel="stylesheet" href="popup.css"></head>
-<body>
-<header><a class="wordmark" href="#" aria-label="Later">later<span>.</span></a><button id="historyBack" class="quiet" hidden>Back</button><button id="read" class="quiet">Refresh cart</button></header>
+<body class="auth-only">
+<header><a class="wordmark" href="#" aria-label="Later">later<span>.</span></a><div id="headerActions"><button id="historyBack" class="quiet" hidden>Back</button><button id="read" class="quiet" hidden>Refresh cart</button><button id="logout" class="quiet" hidden>Log out</button></div></header>
 <main id="app" aria-busy="true">
+<section id="auth" class="auth">
+<div class="empty-shape" aria-hidden="true">L<span>.</span></div>
+<h1 id="authTitle">Log in</h1>
+<p id="authHint">Sign in to wait & save with Later.</p>
+<form id="authForm">
+<label for="authEmail">Email</label>
+<input id="authEmail" name="email" type="email" autocomplete="username" required maxlength="254">
+<label for="authPassword">Password</label>
+<input id="authPassword" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128">
+<button id="authSubmit" class="primary" type="submit">Log in</button>
+</form>
+<button id="authToggle" class="quiet wide" type="button">Need an account? Sign up</button>
+</section>
 <section id="home" class="empty" hidden><div class="empty-shape" aria-hidden="true">L<span>.</span></div><h1>Your activity</h1><p>Open a shopping page to start a new wait.</p><button id="reviewHistory" class="primary">Review past orders</button></section>
 <section id="history" hidden><div class="section-heading"><h1>Your activity</h1><span id="historyCount"></span></div><div id="historyList"></div><p id="historyEmpty" class="history-empty" hidden>No orders to review yet.</p><div id="historyPagination" class="pagination" hidden><button id="historyPrevious" aria-label="Previous orders">‹</button><span id="historyPageCount"></span><button id="historyNext" aria-label="Next orders">›</button></div></section>
-<section id="empty" class="empty"><div class="empty-shape" aria-hidden="true">L<span>.</span></div><h1>Your shopping cart</h1><p id="emptyMessage">Checking this page…</p><button id="retry" class="primary">Read this page</button></section>
+<section id="empty" class="empty" hidden><div class="empty-shape" aria-hidden="true">L<span>.</span></div><h1>Your shopping cart</h1><p id="emptyMessage">Checking this page…</p><button id="retry" class="primary">Read this page</button></section>
 <section id="cartView" hidden>
 <div class="section-heading"><h1 id="heading">Your cart</h1><span id="itemCount"></span></div>
 <article class="product"><div class="product-image"><img id="productImage" alt="" referrerpolicy="no-referrer" hidden><span id="imageFallback" aria-hidden="true">L.</span></div><div class="product-info"><span id="storeName"></span><h2 id="productName"></h2><p id="variant"></p><div class="product-bottom"><strong id="itemPrice"></strong><span id="quantity"></span></div></div></article>

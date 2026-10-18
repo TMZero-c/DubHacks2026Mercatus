@@ -4,6 +4,7 @@ import {cartBaseline,itemKey,lowerOffers} from './market-baseline.js';
 const API='http://localhost:4318', $=id=>document.getElementById(id),money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);
 let draft=null,current=null,index=0,hours=1,confirming=false,online=false,reading=false,searching=false,operation=false,revision=0,lastImport=0,quotes={},searchCache={};
 let pageMode='checking',historyOpen=false,viewingHistory=false,historyCart=null,historyPage=0,historyCarts=[],activeTabId=null;
+let sessionToken='',authUser=null,authMode='login',authBusy=false;
 const active=c=>c&&['authorized','authorizing','reversing','needs_review'].includes(c.status);
 const signature=items=>JSON.stringify(items.map(x=>[x.name,x.variant,x.url||'',Number(x.quantity),Number(x.price??x.cents/100)]));
 const sameCommitment=()=>active(current)&&draft&&signature(current.items)===signature(draft.items);
@@ -21,9 +22,31 @@ function safeLink(value){try{const u=new URL(value);return u.protocol==='https:'
 function safeImage(value){return safeLink(value);}
 function saveUI(){return chrome.storage.session.set({laterUI:{draft,hours,quotes,searchCache,lastImport}}).catch(()=>{});}
 const queryFor=productQuery;
-async function request(path,body){
- const response=await fetch(API+path,{credentials:'include',cache:'no-store',signal:AbortSignal.timeout(path==='/api/compare'||path==='/api/commit-test-card'?30000:7000),...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
- const data=await response.json();if(!response.ok)throw new Error(data.error||'Please try again.');return data;
+async function request(path,body,{auth=true}={}){
+ const headers={};if(body)headers['Content-Type']='application/json';if(auth&&sessionToken)headers.Authorization='Bearer '+sessionToken;
+ const response=await fetch(API+path,{credentials:'include',cache:'no-store',signal:AbortSignal.timeout(path==='/api/compare'||path==='/api/commit-test-card'?30000:7000),headers,...(body?{method:'POST',body:JSON.stringify(body)}:{})});
+ const data=await response.json().catch(()=>({}));
+ if(response.status===401){const err=new Error(data.error||'Sign in to continue.');err.code='auth';if(auth&&path!=='/api/auth/me'){await clearSession();showAuth();}throw err;}
+ if(!response.ok)throw new Error(data.error||'Please try again.');return data;
+}
+async function saveSession(token,user){sessionToken=token||'';authUser=user||null;await chrome.storage.local.set({laterAuth:{token:sessionToken,user:authUser}}).catch(()=>{});}
+async function clearSession(){sessionToken='';authUser=null;await chrome.storage.local.remove('laterAuth').catch(()=>{});}
+function showAuth(message=''){
+ document.body.classList.add('auth-only');authUser=null;
+ $('auth').hidden=false;$('home').hidden=true;$('history').hidden=true;$('empty').hidden=true;$('cartView').hidden=true;$('footer').hidden=true;
+ $('historyBack').hidden=true;$('read').hidden=true;$('logout').hidden=true;$('app').setAttribute('aria-busy','false');
+ setAuthMode(authMode);notify(message);
+}
+function setAuthMode(mode){
+ authMode=mode==='signup'?'signup':'login';
+ $('authTitle').textContent=authMode==='signup'?'Create account':'Log in';
+ $('authHint').textContent=authMode==='signup'?'Save waits to your Later account.':'Sign in to wait & save with Later.';
+ $('authSubmit').textContent=authMode==='signup'?'Sign up':'Log in';
+ $('authToggle').textContent=authMode==='signup'?'Already have an account? Log in':'Need an account? Sign up';
+ $('authPassword').autocomplete=authMode==='signup'?'new-password':'current-password';
+}
+function showAppShell(){
+ document.body.classList.remove('auth-only');$('auth').hidden=true;$('logout').hidden=false;$('logout').title=authUser?.email||'Log out';
 }
 function baseline(){const fresh={};for(const item of draft.items){const cache=searchCache[queryFor(item).toLowerCase()];if(cache&&Date.now()-cache.at<3600000){const offers=lowerOffers(cache.offers,Math.round(Number(item.price)*100));if(offers.length)fresh[itemKey(item)]=Math.min(...offers.map(x=>x.price));}}return cartBaseline(draft.items,fresh);}
 function renderHistory(){
@@ -34,6 +57,8 @@ function renderHistory(){
 }
 function historyStatus(cart){return cart.selectedOfferId?'Offer selected':({authorized:'Waiting for offers',released:'Hold released',declined:'Hold declined',needs_review:'Hold needs review',authorizing:'Authorization pending',reversing:'Releasing hold'})[cart.status]||'Wait ended';}
 function render(){
+ if(!authUser){showAuth();return;}
+ showAppShell();
  const neutral=pageMode!=='shopping'&&!viewingHistory;
  $('home').hidden=!neutral||historyOpen||pageMode==='checking';$('history').hidden=!neutral||!historyOpen;$('historyBack').hidden=!historyOpen&&!viewingHistory;$('read').hidden=neutral||viewingHistory;
  if(neutral){$('empty').hidden=pageMode!=='checking';$('retry').hidden=true;$('cartView').hidden=true;$('footer').hidden=true;$('app').setAttribute('aria-busy',String(pageMode==='checking'));document.body.classList.remove('has-deal','multiple');if(historyOpen)renderHistory();return;}
@@ -95,7 +120,7 @@ async function syncState(){
   historyCarts=data.carts||[];const pending=historyCarts.find(active);current=pending||null;
   if(pending&&(!draft||sameCommitment())){const old=draft?.items||[];draft=normalize({source:'Shopping cart',items:pending.items.map(x=>({...x,image:old.find(o=>o.url===x.url)?.image||''}))});confirming=false;}
   await chrome.storage.session.set({laterState:pending||null,laterHistory:historyCarts});render();return true;
- }catch{online=false;notify('Later is offline. Start the local app, then retry.');render();return false;}
+ }catch(e){if(!authUser){notify(e.message||'Sign in to continue.');render();return false;}online=false;notify('Later is offline. Start the local app, then retry.');render();return false;}
 }
 async function compare(){
  if(searching||!draft)return;const item=draft.items[index],query=queryFor(item),key=query.toLowerCase(),requestRevision=revision;searching=true;notify();render();
@@ -122,12 +147,39 @@ $('reviewHistory').onclick=()=>{historyOpen=true;historyPage=0;notify();render()
 $('read').onclick=readPage;$('retry').onclick=readPage;$('compare').onclick=compare;$('primary').onclick=primary;$('release').onclick=releaseHold;$('back').onclick=()=>{confirming=false;render();};$('consent').onchange=render;
 $('previous').onclick=()=>{index--;notify();render();};$('next').onclick=()=>{index++;notify();render();};
 document.querySelectorAll('[data-hours]').forEach(button=>button.onclick=()=>{hours=Number(button.dataset.hours);render();saveUI();});
+$('authToggle').onclick=()=>{setAuthMode(authMode==='signup'?'login':'signup');notify();};
+$('authForm').onsubmit=async event=>{
+ event.preventDefault();if(authBusy)return;authBusy=true;$('authSubmit').disabled=true;notify();
+ try{
+  const body={email:$('authEmail').value,password:$('authPassword').value};
+  const result=await request(authMode==='signup'?'/api/auth/signup':'/api/auth/login',body,{auth:false});
+  await saveSession(result.token,result.user);$('authPassword').value='';await startApp();
+ }catch(e){notify(e.message==='Failed to fetch'?'Cannot reach the local app. Keep npm start running, then try again.':(e.message||'Could not sign in.'));}finally{authBusy=false;$('authSubmit').disabled=false;}
+};
+$('logout').onclick=async()=>{
+ try{if(sessionToken)await request('/api/auth/logout',{});}catch{}
+ await clearSession();draft=null;current=null;historyCarts=[];pageMode='checking';historyOpen=false;viewingHistory=false;confirming=false;showAuth();notify('Signed out.');
+};
 chrome.storage.onChanged.addListener((changes,area)=>{if(area==='session'&&changes.laterCart?.newValue?.tabId===activeTabId)acceptImport(changes.laterCart.newValue,{fromPage:true});});
-async function boot(){
+async function startApp(){
+ showAppShell();
  try{const saved=await chrome.storage.session.get(['laterUI','laterCart','laterState','laterHistory']);const ui=saved.laterUI;historyCarts=saved.laterHistory||[];
   if(ui?.draft&&!draft){draft=normalize(ui.draft);hours=[.25,1,12].includes(ui.hours)?ui.hours:1;lastImport=ui.lastImport||0;searchCache=ui.searchCache||{};quotes={};for(const item of draft.items){const cache=searchCache[queryFor(item).toLowerCase()];if(cache&&Date.now()-cache.at<3600000){const lower=lowerOffers(cache.offers,Math.round(Number(item.price)*100));if(lower.length)quotes[itemKey(item)]=Math.min(...lower.map(x=>x.price));}}}
   if(active(saved.laterState)){current=saved.laterState;if(!draft)draft=normalize({items:current.items});}
   render();const check=syncState();await readPage({refreshState:false});const connected=await check;if(!connected)notify('Later is offline. Start the local app, then retry.');else if(!online)notify('Connect Visa in the local app before starting a wait.');
  }catch{pageMode='home';render();notify('Could not load your activity. Try again.');$('app').setAttribute('aria-busy','false');$('emptyMessage').textContent='Open your shopping cart to get started.';}
 }
-boot();setInterval(()=>{if(!document.hidden&&!operation&&!confirming)syncState();},10000);
+async function boot(){
+ showAuth();
+ try{
+  const stored=await chrome.storage.local.get('laterAuth');const savedAuth=stored.laterAuth;
+  let status=null;try{status=await request('/api/auth/status',null,{auth:false});}catch{status=null;}
+  if(status&&!status.configured){showAuth('Add MONGODB_URI to outputs/committed-cart/.env, then restart npm start.');return;}
+  if(!status){showAuth('Later is offline. Start the local app (npm start), then reopen this popup.');return;}
+  if(savedAuth?.token){sessionToken=savedAuth.token;
+   try{const me=await request('/api/auth/me');authUser=me.user;await saveSession(sessionToken,authUser);await startApp();return;}
+   catch(e){await clearSession();showAuth(e.code==='auth'?'Sign in to continue.':(e.message||'Could not verify your session. Sign in again.'));return;}}
+  showAuth();
+ }catch{showAuth('Could not load sign-in. Try again.');}
+}
+boot();setInterval(()=>{if(!document.hidden&&authUser&&!operation&&!confirming)syncState();},10000);
