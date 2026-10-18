@@ -1,3 +1,4 @@
+import {productImages} from './product-images.mjs';
 import {publicVisaReceipt} from './receipt-view.mjs';
 import {createHash,randomUUID} from 'node:crypto';
 import {normalizeShoppingTerms} from './shopping-assistant.mjs';
@@ -16,7 +17,7 @@ export function validateCart(body,now=Date.now()){
   if(shoppingTerms.waitHours!==hours||shoppingTerms.deliveryBy!==deliveryDate)throw new Error('Review matching wait and delivery terms before authorizing.');
  }
  const snapshot={published:body.publish===true,items,amount,currency:'USD',condition:'New only',sellers,deliveryDate,...(shoppingTerms?{shoppingTerms}:{}),expiresAt:new Date(now+hours*3600000).toISOString(),purchaseApproval:'Required separately; no automatic purchase',environment:'visa-acceptance-sandbox'};
- return {...snapshot,digest:createHash('sha256').update(JSON.stringify(snapshot)).digest('hex'),id:randomUUID(),createdAt:new Date(now).toISOString(),status:'authorizing'};
+ return {...snapshot,...(body.productImages?{productImages:productImages(body.productImages,items.length)}:{}),digest:createHash('sha256').update(JSON.stringify(snapshot)).digest('hex'),id:randomUUID(),createdAt:new Date(now).toISOString(),status:'authorizing'};
 }
 export function hasAuthorization(cart){return cart.synthetic!==true&&cart.environment==='visa-acceptance-sandbox'&&/^\d{1,60}$/.test(cart.authorizationId||'')&&cart.visaStatus==='AUTHORIZED'&&cart.authorizedAmount===cart.amount;}
 export function verify(cart,now=Date.now()){

@@ -126,6 +126,18 @@ globalThis.fetch=async(url,options={})=>{
  }
  return{directory,state,origin,request,browserRequests,log:async()=>{try{return(await readFile(logfile,'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse);}catch(error){if(error.code==='ENOENT')return[];throw error;}}};
 }
+test('card flow accepts eight long product photos and enforces a 40 KiB byte limit without payment calls',async t=>{
+ const f=await fixture(t);
+ const body={...draft,items:Array.from({length:8},(_,index)=>({...draft.items[0],name:'Product '+index+' '+('x'.repeat(100))})),productImages:Array(8).fill('https://cdn.example.com/'+('a'.repeat(1900))+'.jpg')};
+ assert.ok(Buffer.byteLength(JSON.stringify(body))>16000,'fixture exceeds the previous request ceiling');
+ const opened=await f.request('/api/card-flow',{body});assert.equal(opened.status,200,opened.raw);assert.match(opened.data.flow,/^[a-f0-9]{64}$/);
+ const details=await f.request('/api/card-flow-info',{body:{},headers:{'X-Later-Card-Flow':opened.data.flow}});assert.equal(details.status,200,details.raw);assert.equal(details.data.amount,1988*8);
+ const oversized={...draft,unused:'€'.repeat(14000)};
+ assert.ok(JSON.stringify(oversized).length<40*1024);assert.ok(Buffer.byteLength(JSON.stringify(oversized))>40*1024,'limit measures encoded bytes rather than characters');
+ const rejected=await f.request('/api/card-flow',{body:oversized});assert.equal(rejected.status,413,rejected.raw);
+ assert.deepEqual((await f.request('/api/state')).data.carts,[]);assert.deepEqual(await f.log(),[],'opening and validating a flow must never call a payment provider');
+});
+
 test('saved-card HTTP flow preserves ownership, bound terms, privacy, consent, and token-only authorization',async t=>{
  const f=await fixture(t);
  const post=(path,body,options={})=>f.request(path,{...options,body});

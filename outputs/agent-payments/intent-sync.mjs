@@ -1,4 +1,5 @@
 import {verify,validateOffer} from '../committed-cart/engine.mjs';
+import {productImages} from '../committed-cart/product-images.mjs';
 const ENDPOINT='https://later-merchant-mcp.vercel.app/api/agent/ingest';
 const fields=['id','environment','status','authorizationId','authorizedAmount','visaStatus','amount','currency','condition','shoppingTerms','sellers','deliveryDate','expiresAt','digest','published','items','createdAt','authorizedAt','purchaseApproval','selectedOfferId','selectedAt'];
 export function createIntentSync({carts,save,key=process.env.LATER_HOSTED_ACCESS_KEY,fetchImpl=fetch}){
@@ -7,7 +8,10 @@ export function createIntentSync({carts,save,key=process.env.LATER_HOSTED_ACCESS
   for(const cart of Object.values(carts)){
    if(!cart.published||(!verify(cart).active&&!cart.hostedIntentSyncedAt))continue;
    if(!verify(cart).active&&closed.get(cart.id)===cart.status)continue;
-   const response=await fetchImpl(ENDPOINT,{method:'POST',redirect:'error',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({cart:Object.fromEntries(fields.filter(k=>cart[k]!==undefined).map(k=>[k,cart[k]]))}),signal:AbortSignal.timeout(15000)});
+   const safe=Object.fromEntries(fields.filter(k=>cart[k]!==undefined).map(k=>[k,cart[k]]));
+   safe.items=cart.items.map(({name,variant,quantity,cents,url})=>({name,variant,quantity,cents,url}));
+   if(cart.productImages!==undefined)safe.productImages=productImages(cart.productImages,cart.items.length);
+   const response=await fetchImpl(ENDPOINT,{method:'POST',redirect:'error',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({cart:safe}),signal:AbortSignal.timeout(15000)});
    if(!response.ok)throw new Error('Hosted intent sync unavailable');const result=await response.json();let changed=false;
    if(!cart.hostedIntentSyncedAt){cart.hostedIntentSyncedAt=new Date().toISOString();changed=true;}
    if(!verify(cart).active)closed.set(cart.id,cart.status);
