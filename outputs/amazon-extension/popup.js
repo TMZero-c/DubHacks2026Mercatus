@@ -86,8 +86,8 @@ function showAuth(message=''){
 }
 function setAuthMode(mode){
  authMode=mode==='signup'?'signup':'login';
- $('authTitle').textContent=authMode==='signup'?'Create account':'Log in';
- $('authHint').textContent=sandboxSignIn?'Local sandbox account · no wallet needed.':authMode==='signup'?'Save waits to your Mercatus account.':'Sign in to manage your waits.';
+ $('authTitle').textContent=authMode==='signup'?'Join Mercatus.':'Welcome to Mercatus.';
+ $('authHint').textContent='Name your price. Let the market come to you.';
  $('authSubmit').textContent=authMode==='signup'?'Sign up':'Log in';
  $('authToggle').textContent=authMode==='signup'?'Already have an account? Log in':'Need an account? Sign up';
  $('authPassword').autocomplete=authMode==='signup'?'new-password':'current-password';
@@ -120,7 +120,7 @@ function render(){
  $('itemPrice').textContent=money(Math.round(Number(item.price)*100));$('quantity').textContent='Qty '+item.quantity;
  const image=$('productImage');image.alt=item.name.split('|')[0].trim();if(image.getAttribute('src')!==item.image){image.hidden=true;$('imageFallback').hidden=false;if(item.image)image.src=item.image;else image.removeAttribute('src');}else if(image.complete&&image.naturalWidth){image.hidden=false;$('imageFallback').hidden=true;}
  $('pagination').hidden=items.length===1;$('pageCount').textContent=(index+1)+' of '+items.length;$('previous').disabled=index===0;$('next').disabled=index===items.length-1;
- if(viewingHistory){$('choices').hidden=true;$('confirmation').hidden=true;$('commitment').hidden=false;$('commitTitle').textContent=historyStatus(historyCart);$('commitDetail').textContent=money(historyCart.amount)+' · '+new Date(historyCart.createdAt||historyCart.expiresAt).toLocaleDateString();$('offerCount').textContent='';$('offer').hidden=true;$('release').hidden=true;$('footer').hidden=true;return;}
+ if(viewingHistory){$('statusBag').src='assets/bags/'+(historyCart.selectedOfferId?'purple-bow.svg':['released','declined','needs_review'].includes(historyCart.status)?'pink-sad.svg':'blue-sunglasses.svg');$('choices').hidden=true;$('confirmation').hidden=true;$('commitment').hidden=false;$('commitTitle').textContent=historyStatus(historyCart);$('commitDetail').textContent=money(historyCart.amount)+' · '+new Date(historyCart.createdAt||historyCart.expiresAt).toLocaleDateString();$('offerCount').textContent='';$('offer').hidden=true;$('release').hidden=true;$('footer').hidden=true;return;}
  const waiting=sameCommitment();document.body.classList.toggle('is-confirming',confirming);document.body.classList.toggle('is-waiting',waiting);$('choices').hidden=waiting||confirming;$('commitment').hidden=!waiting||confirming;$('confirmation').hidden=!confirming;
  $('total').textContent=money(total);const amount=baseline();const estimate=estimateWait({price:amount,margin:30,retainedMargin:8,cac:Math.min(20,amount/100*.15),offersPerHour:.5,hours,waitCostPerHour:0});
  $('estimate').textContent=money(estimate.expectedPrice);$('saving').textContent='Save ~'+money(total-estimate.expectedPrice);$('estimateLabel').textContent=amount<total?'Estimate from lower listing':'Estimated with a wait';
@@ -135,7 +135,7 @@ function render(){
   const offers=(current.offers||[]).filter(o=>Date.parse(o.expiresAt)>Date.now()).sort((a,b)=>a.amount-b.amount),bestOffer=offers[0],selected=!!current.selectedOfferId;
   $('commitTitle').textContent=selected?'Offer selected':current.status==='authorized'?'Waiting for offers':current.status==='needs_review'?'Check your hold':'Updating your hold';
   $('commitDetail').textContent=current.status==='authorized'?money(current.amount)+' held · until '+new Date(current.expiresAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'Check the Visa sandbox portal.';
-  $('offerCount').textContent=offers.length;$('offer').hidden=!bestOffer||selected;
+  $('statusBag').src='assets/bags/'+(selected?'purple-bow.svg':current.status==='needs_review'?'pink-sad.svg':'yellow-wink.svg');$('offerCount').textContent=offers.length?(offers.length===1?'1 offer':offers.length+' offers'):'';$('offer').hidden=!bestOffer||selected;
   if(bestOffer){$('offerMerchant').textContent=bestOffer.merchant;$('offerTerms').textContent='By '+bestOffer.deliveryDate+' · '+bestOffer.returns;$('offerTerms').title=bestOffer.returns;$('selectOffer').textContent='Choose '+money(bestOffer.amount);$('selectOffer').onclick=()=>chooseOffer(bestOffer.id);}
   $('release').hidden=current.status!=='authorized';$('release').disabled=operation;
  }
@@ -240,7 +240,7 @@ $('productImage').onload=()=>{$('productImage').hidden=false;$('imageFallback').
 $('reviewHistory').onclick=()=>{historyOpen=true;historyPage=0;notify();render();syncState();};$('historyBack').onclick=()=>{if(viewingHistory){viewingHistory=false;historyOpen=true;pageMode='home';}else historyOpen=false;notify();render();};$('historyPrevious').onclick=()=>{historyPage--;renderHistory();};$('historyNext').onclick=()=>{historyPage++;renderHistory();};
 $('read').onclick=readPage;$('retry').onclick=readPage;$('compare').onclick=compare;$('primary').onclick=primary;$('release').onclick=releaseHold;$('back').onclick=()=>{confirming=false;render();};$('consent').onchange=render;
 $('previous').onclick=()=>{index--;notify();render();};$('next').onclick=()=>{index++;notify();render();};
-document.querySelectorAll('[data-hours]').forEach(button=>button.onclick=()=>{editingHours=Number(button.dataset.hours);document.querySelectorAll('[data-hours]').forEach(choice=>choice.setAttribute('aria-pressed',String(Number(choice.dataset.hours)===editingHours)));});
+document.querySelectorAll('[data-hours]').forEach(button=>button.onclick=()=>{if(operation)return;const selected=Number(button.dataset.hours);if(button.closest('.cart-durations')){shoppingTerms={...(shoppingTerms||defaultTerms()),waitHours:selected};hours=selected;render();saveUI();return;}editingHours=selected;document.querySelectorAll('#durations [data-hours]').forEach(choice=>choice.setAttribute('aria-pressed',String(Number(choice.dataset.hours)===editingHours)));});
 $('editTerms').onclick=()=>{if(!draft||operation)return;const terms=shoppingTerms||defaultTerms();editingHours=terms.waitHours;$('maximumPrice').value=(terms.maxTotalCents/100).toFixed(2);$('minimumSavings').value=(terms.minimumSavingsCents/100).toFixed(2);$('deliveryDeadline').value=terms.deliveryBy;$('deliveryDeadline').min=localDay(0);$('maximumPrice').max=(cartTotal()/100).toFixed(2);$('minimumSavings').max=((cartTotal()-1)/100).toFixed(2);$('termsError').hidden=true;document.querySelectorAll('[data-hours]').forEach(choice=>choice.setAttribute('aria-pressed',String(Number(choice.dataset.hours)===editingHours)));$('termsEditor').hidden=false;$('maximumPrice').focus();};
 $('closeTerms').onclick=()=>{$('termsEditor').hidden=true;$('editTerms').focus();};
 $('termsForm').onsubmit=event=>{event.preventDefault();const terms=validTerms({maxTotalCents:Math.round(Number($('maximumPrice').value)*100),minimumSavingsCents:Math.round(Number($('minimumSavings').value)*100),waitHours:editingHours,deliveryBy:$('deliveryDeadline').value,condition:'new'});if(!terms){$('termsError').textContent='Choose a valid budget, savings and delivery date.';$('termsError').hidden=false;return;}shoppingTerms=terms;hours=terms.waitHours;confirming=false;$('consent').checked=false;$('termsEditor').hidden=true;render();saveUI();};
