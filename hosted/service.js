@@ -1,6 +1,6 @@
 import {store} from './store.js';
 import {createCampaign,updateCampaign,previewCampaign,runAgent,merchantSnapshot,reconcile} from '../outputs/committed-cart/merchant-engine.mjs';
-import {verify} from '../outputs/committed-cart/engine.mjs';
+import {waitingIntents} from '../outputs/committed-cart/merchant-intents.mjs';
 import {merchantTools} from '../outputs/committed-cart/merchant-tools.mjs';
 // Stateful Testnet deal tools run on the local protocol backend, not this hosted adapter.
 const hostedToolNames=new Set(['merchant_overview','merchant_intents','merchant_preview','merchant_create_campaign','merchant_update_campaign','merchant_run']);
@@ -22,7 +22,7 @@ function processLive(data,live){
 export async function execute(name,body={},db=store){
  if(name==='merchant_overview'){const {data}=await db.read();const live=workspace(data);reconcile(live.merchant,live.carts);return merchantSnapshot(live.merchant,live.carts);}
  if(name==='merchant_run')return db.transaction(data=>{const live=workspace(data);return{submitted:processLive(data,live).submitted};});
- if(name==='merchant_intents'){const {data}=await db.read();return{intents:Object.values(workspace(data).carts).filter(c=>verify(c).acceptingOffers).map(c=>({id:c.id,items:c.items,amount:c.amount,sellers:c.sellers,deliveryDate:c.deliveryDate,expiresAt:c.expiresAt,digest:c.digest,intentSource:'visa-acceptance-sandbox',verification:verify(c)}))};}
+ if(name==='merchant_intents'){const {data}=await db.read();return{intents:waitingIntents(workspace(data).carts).map(cart=>({...cart,intentSource:'visa-acceptance-sandbox'}))};}
  if(name==='merchant_preview'){const {data}=await db.read();const live=workspace(data);return previewCampaign(live.merchant,body,live.carts);}
  if(name==='merchant_create_campaign'){if(body.executionMode==='solana')throw new Error('Solana execution requires the local payment service and a deployed program.');idempotency(body);return db.transaction(data=>({campaign:createCampaign(data.merchant,body)}));}
  if(name==='merchant_update_campaign'&&body.executionMode==='solana')throw new Error('Solana execution requires the local payment service.');
