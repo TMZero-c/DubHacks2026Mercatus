@@ -127,7 +127,7 @@ $('nativePayment').onsubmit=async event=>{
  operation=true;$('authorizeCard').disabled=true;$('closeCard').disabled=true;$('cardMessage').textContent='Authorizing…';
  try{
   const card={number:$('enteredCardNumber').value.replace(/\s/g,''),expirationMonth:$('enteredCardMonth').value.padStart(2,'0'),expirationYear:$('enteredCardYear').value,securityCode:$('enteredCardCvv').value};
-  const result=await request('/api/commit-card',{card,billTo:billingDetails,flow:cardFlow});current=result.cart;confirming=false;closeCard();await syncState();
+  const result=await request('/api/commit-card',{card,billTo:billingDetails,flow:cardFlow,tokenizeCard:$('tokenizeCard').checked===true});current=result.cart;confirming=false;closeCard();await syncState();
   if(!result.cart.verification?.active)notify('Check your hold before trying again.');
  }catch(e){$('cardMessage').textContent=e.name==='TimeoutError'?'Hold status is pending. Go back and refresh before trying again.':e.message;await syncState();}
  finally{operation=false;$('authorizeCard').disabled=false;$('closeCard').disabled=false;render();}

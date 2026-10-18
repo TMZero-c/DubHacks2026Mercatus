@@ -36,7 +36,7 @@ export function validateBilling(value){
  return result;
 }
 export function signedPost(path,data,config,date=new Date().toUTCString()){
- if(!['/microform/v2/sessions','/pts/v2/payments'].includes(path)&&!/^\/pts\/v2\/payments\/\d{1,60}\/(captures|reversals)$/.test(path))throw new Error('Invalid sandbox endpoint');
+ if(!['/microform/v2/sessions','/pts/v2/payments','/tms/v1/instrumentidentifiers'].includes(path)&&!/^\/pts\/v2\/payments\/\d{1,60}\/(captures|reversals)$/.test(path))throw new Error('Invalid sandbox endpoint');
  const body=JSON.stringify(data),digest='SHA-256='+createHash('sha256').update(body).digest('base64');
  const fields=['host','v-c-date','(request-target)','digest','v-c-merchant-id'];
  const canonical=`host: ${host}\nv-c-date: ${date}\n(request-target): post ${path}\ndigest: ${digest}\nv-c-merchant-id: ${config.merchant}`;
