@@ -1,0 +1,51 @@
+@font-face{font-family:"Nunito";font-style:normal;font-weight:600;font-display:swap;src:url("/assets/fonts/nunito-600.woff2") format("woff2")}
+@font-face{font-family:"Nunito";font-style:normal;font-weight:700;font-display:swap;src:url("/assets/fonts/nunito-700.woff2") format("woff2")}
+@font-face{font-family:"Nunito";font-style:normal;font-weight:800;font-display:swap;src:url("/assets/fonts/nunito-800.woff2") format("woff2")}
+@font-face{font-family:"Nunito";font-style:normal;font-weight:900;font-display:swap;src:url("/assets/fonts/nunito-900.woff2") format("woff2")}
+:root{--ink:#17201f;--muted:#6f746e;--line:#ded9cf;--paper:#fffdf9;--cream:#f7f1e7;--blue:#2864e8;--blue-deep:#1d54cd}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:"Nunito",sans-serif;font-weight:600;line-height:1.5;background-image:radial-gradient(circle at 8% 0,rgba(255,92,77,.06),transparent 28%),radial-gradient(circle at 92% 8%,rgba(53,201,154,.07),transparent 26%)}
+a{color:var(--blue)}
+.top{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:72px;padding:0 max(20px,calc((100vw - 1100px)/2));background:rgba(255,253,249,.94);border-bottom:1px solid var(--line)}
+.wordmark{color:var(--ink);font-size:28px;font-weight:900;letter-spacing:-.06em;text-decoration:none}
+.wordmark span{color:var(--blue)}
+nav{display:flex;align-items:center;gap:18px}
+nav a{color:var(--ink);font-size:14px;font-weight:800;text-decoration:none}
+.solid,.ghost{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border-radius:12px;font-weight:900;text-decoration:none}
+.solid{background:var(--blue);color:#fff;border:1px solid #2058d5;box-shadow:0 4px 10px rgba(40,100,232,.2)}
+.solid:hover{background:var(--blue-deep);color:#fff}
+.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+main{max-width:1100px;margin:0 auto;padding:48px 20px 24px}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:32px;align-items:center;margin-bottom:64px}
+.eyebrow{margin:0 0 12px;color:var(--blue);font-size:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+h1{margin:0;font-size:clamp(40px,6vw,68px);font-weight:900;letter-spacing:-.055em;line-height:1.02}
+.lede{max-width:640px;margin:18px 0 0;color:var(--muted);font-size:18px}
+.hero-actions{display:flex;gap:12px;margin-top:28px}
+.hero-bag{width:180px;height:180px;justify-self:end;transform:rotate(6deg)}
+h2{margin:0 0 22px;font-size:32px;font-weight:900;letter-spacing:-.04em}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0;padding:0;list-style:none}
+.steps li{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 8px 22px rgba(46,39,29,.04)}
+.steps img{width:56px;height:56px}
+.steps span{display:block;margin-top:12px;color:var(--blue);font-size:13px;font-weight:900}
+.steps h3{margin:4px 0 8px;font-size:20px;font-weight:900;letter-spacing:-.03em}
+.steps p,.sides p,.note p,footer p{margin:0;color:var(--muted);font-size:15px}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:56px}
+.sides article,.note{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:28px;box-shadow:0 8px 22px rgba(46,39,29,.04)}
+.sides ul{margin:12px 0 0;padding-left:18px;color:var(--muted)}
+.sides li{margin:8px 0}
+.note{margin-top:18px}
+footer{display:flex;align-items:center;gap:18px;max-width:1100px;margin:28px auto 0;padding:28px 20px 40px;color:var(--muted);font-size:14px;font-weight:800}
+footer p{margin-right:auto}
+footer a{color:var(--ink);font-weight:800;text-decoration:none}
+@media(max-width:900px){
+ nav a:not(.solid):not(.ghost){display:none}
+ .hero,.steps,.sides{grid-template-columns:1fr}
+ .hero-bag{justify-self:start;width:120px;height:120px}
+}
+@media(max-width:560px){
+ .hero-actions,.top{flex-wrap:wrap}
+ nav{width:100%;justify-content:flex-start;padding-bottom:12px}
+ h1{font-size:40px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}

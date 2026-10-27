@@ -1,6 +1,7 @@
 import {productQuery} from './product-search.js';
 import {estimateWait} from './economics.js';
 import {cartBaseline,itemKey,lowerOffers} from './market-baseline.js';
+import {ensureShopperOnboarding,replayShopperOnboarding} from './onboarding.js';
 const API='http://localhost:4318', $=id=>document.getElementById(id),money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);
 const DEMO_CARD=Object.freeze({number:'4111111111111111',expirationMonth:'12',expirationYear:'2031',securityCode:'123'});
 let draft=null,current=null,index=0,hours=1,confirming=false,online=false,reading=false,searching=false,operation=false,revision=0,lastImport=0,quotes={},searchCache={};
@@ -79,7 +80,8 @@ async function clearSession(){
  await clearAccountCache(epoch);await removal;if(epoch===authEpoch)$('authEmail').value='';
 }
 function showAuth(message=''){
- document.body.classList.add('auth-only');authUser=null;$('cardEntry').hidden=true;
+ document.body.classList.add('auth-only');document.body.classList.remove('onboarding-only');authUser=null;$('cardEntry').hidden=true;
+ if($('onboarding'))$('onboarding').hidden=true;
  $('auth').hidden=false;$('home').hidden=true;$('history').hidden=true;$('empty').hidden=true;$('cartView').hidden=true;$('footer').hidden=true;
  $('historyBack').hidden=true;$('read').hidden=true;$('logout').hidden=true;$('app').setAttribute('aria-busy','false');
  setAuthMode(authMode);notify(message);
@@ -273,11 +275,17 @@ async function startApp(){
   render();const check=syncState();await readPage({refreshState:false});const connected=await check;if(epoch!==authEpoch)return;if(!connected)notify('Mercatus is offline. Start the local app, then retry.');else if(!online)notify('Payments are not connected yet.');
  }catch{if(epoch!==authEpoch)return;pageMode='home';render();notify('Could not load your activity. Try again.');$('app').setAttribute('aria-busy','false');$('emptyMessage').textContent='Open your shopping cart to get started.';}
 }
+$('authHowItWorks').onclick=()=>{
+ replayShopperOnboarding({onDone:({signup})=>{showAuth();if(signup)setAuthMode('signup');}});
+};
 
 async function boot(){
- showAuth();
  try{
   const stored=await chrome.storage.local.get('laterAuth');const savedAuth=stored.laterAuth;
+  if(!savedAuth?.token){
+   const shown=await ensureShopperOnboarding({onDone:({signup})=>{showAuth();if(signup)setAuthMode('signup');}});
+   if(!shown)showAuth();
+  }else showAuth();
   let status=null;try{status=await request('/api/auth/status',null,{auth:false});}catch{status=null;}
   sandboxSignIn=status?.mode==='local-sandbox';
   if(status&&!status.configured){showAuth('Sign-in is not connected yet.');return;}

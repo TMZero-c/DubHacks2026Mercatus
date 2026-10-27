@@ -953,3 +953,172 @@ main{background:var(--color-paper)}
 #nativePayment .section-heading{margin:16px 0}
 .history-item{border:1px solid var(--color-line);padding:14px;border-radius:12px;margin-bottom:10px;background:#fff}
 @media(prefers-reduced-motion:reduce){.auth-bag,.bag-wave{animation:none}.primary{transition:none}}
+/* —— Shopper onboarding —— */
+.onboarding {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 14px;
+  overflow: hidden;
+  background: var(--color-cream);
+}
+
+.onboarding-skip {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  z-index: 3;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 4px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.onboarding-skip:hover { color: var(--color-ink); }
+
+.onboarding-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: 0;
+  touch-action: pan-y;
+}
+
+.onboarding-hero {
+  position: relative;
+  width: 100%;
+  height: 210px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.onboarding-waves {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--onboarding-accent, var(--color-bag-red));
+}
+
+.onboarding-waves .wave-cream { fill: #fffdf9; }
+.onboarding-waves .wave-tint { fill: currentColor; opacity: .28; }
+
+.onboarding-bag {
+  position: relative;
+  z-index: 1;
+  width: 120px;
+  height: 120px;
+  transform-origin: 50% 100%;
+}
+
+.onboarding-bag.is-bounce {
+  animation: onboarding-bounce .55s ease;
+}
+
+@keyframes onboarding-bounce {
+  0% { transform: translateY(14px) scale(.96); opacity: .4; }
+  55% { transform: translateY(-7px) scale(1.03); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-bag.is-bounce { animation: none; }
+}
+
+.onboarding-stage h1 {
+  margin: 8px 18px 0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+  line-height: 1.15;
+  color: var(--color-ink);
+}
+
+.onboarding-stage p {
+  margin: 10px 22px 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--color-muted);
+  max-width: 300px;
+}
+
+.onboarding-footer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  padding: 16px 18px 4px;
+}
+
+.onboarding-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.onboarding-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  background: #d8d2c6;
+  cursor: pointer;
+}
+
+.onboarding-dot.is-active {
+  background: var(--color-blue);
+  transform: scale(1.15);
+}
+
+.onboarding-footer .primary {
+  width: 100%;
+}
+
+.auth-how {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-how:hover { color: var(--color-blue); }
+
+body.onboarding-only {
+  background: var(--color-cream);
+}
+
+body.onboarding-only .popup-header,
+body.onboarding-only .progress-track,
+body.onboarding-only #auth,
+body.onboarding-only #home,
+body.onboarding-only #history,
+body.onboarding-only #empty,
+body.onboarding-only #cartView,
+body.onboarding-only #footer,
+body.onboarding-only #cardEntry {
+  display: none !important;
+}
+
+body.onboarding-only main {
+  background: transparent;
+  padding: 0;
+}
