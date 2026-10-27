@@ -5,6 +5,7 @@ import {createStore} from './store.js';
 import {execute,hostedTools} from './service.js';
 import {validateCart,authorize} from '../outputs/committed-cart/engine.mjs';
 import {newMerchantState} from '../outputs/committed-cart/merchant-engine.mjs';
+import {readFile} from 'node:fs/promises';
 import {validKey,sessionCookie,authenticated,originAllowed} from './auth.js';
 import {auditPayload,probeText} from './audit-reply.js';
 const campaign={name:'Hosted test',merchant:'Campus Electronics',dailyBudget:'100',maxIncentive:'20',minMarginPct:20,discountPct:15,strategy:'fixed_discount',deliveryDays:2,offerMinutes:60,returns:'30-day returns',sellerRules:['Authorized retailers only'],inventoryAttested:true,requestId:'campaign',products:[{name:'Wireless headphones',variant:'Black',unitPrice:'150',cost:'90',stock:1}]};
@@ -76,3 +77,13 @@ test('hosted audit route returns gradeable text for the policy probes',()=>{
  assert.equal(crisis.output.includes('most effective'),false);
 });
 test('workspace bearer/cookie auth, expiry and origin checks',()=>{process.env.MERCHANT_ACCESS_KEY='test-'.repeat(16);assert.equal(validKey('wrong'),false);assert.equal(authenticated({headers:{authorization:'Bearer '+process.env.MERCHANT_ACCESS_KEY}}),true);const cookie=sessionCookie().split(';')[0];assert.equal(authenticated({headers:{cookie}}),true);assert.equal(authenticated({headers:{cookie:sessionCookie(Date.now()-2*86400000).split(';')[0]}}),false);assert.equal(originAllowed({headers:{host:'later.vercel.app',origin:'https://evil.example'}}),false);assert.equal(originAllowed({headers:{host:'later.vercel.app',origin:'https://later.vercel.app'}}),true);});
+test('hosted merchant login uses Mercatus auth chrome, not the old Later card',async()=>{
+ const source=await readFile(new URL('../api/app.js',import.meta.url),'utf8');
+ assert.match(source,/Welcome to mercatus/);
+ assert.match(source,/auth-gate/);
+ assert.match(source,/auth-bag/);
+ assert.match(source,/red-happy\.svg/);
+ assert.equal(source.includes('>later'),false);
+ assert.equal(source.includes('Later ·'),false);
+ assert.equal(source.includes('Open workspace'),false);
+});

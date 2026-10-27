@@ -31,11 +31,15 @@
       "destination": "/api/app"
     },
     {
-      "source": "/",
+      "source": "/merchant",
       "destination": "/api/app"
     },
     {
-      "source": "/:asset(brand.css|bootstrap.min.css|merchant-manager.css|merchant-manager.js|catalog-csv.js)",
+      "source": "/merchant/",
+      "destination": "/api/app"
+    },
+    {
+      "source": "/:asset(brand.css|bootstrap.min.css|merchant-manager.css|merchant-manager.js|catalog-csv.js|onboarding.css)",
       "destination": "/api/app"
     },
     {
